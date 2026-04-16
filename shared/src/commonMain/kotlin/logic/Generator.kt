@@ -1,7 +1,5 @@
 package logic
 
-import kotlin.random.Random
-
 data class Problem(
     val premises: List<Expression>,
     val conclusion: Expression,
