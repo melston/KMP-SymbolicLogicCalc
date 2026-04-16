@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 // Defines exactly which premises led to a derived expression
 data class Derivation(

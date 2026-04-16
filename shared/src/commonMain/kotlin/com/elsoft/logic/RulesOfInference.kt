@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 object ModusPonens : Rule {
     override val name = "Modus Ponens"

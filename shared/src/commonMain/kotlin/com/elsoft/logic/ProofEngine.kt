@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 import kotlin.random.Random
 

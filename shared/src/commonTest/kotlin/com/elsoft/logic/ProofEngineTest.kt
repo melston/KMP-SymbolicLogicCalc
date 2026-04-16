@@ -1,5 +1,8 @@
-package logic
+package com.elsoft.logic
 
+import com.elsoft.logic.ConstructiveDilemma
+import com.elsoft.logic.ModusPonens
+import com.elsoft.logic.ProofEngine
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

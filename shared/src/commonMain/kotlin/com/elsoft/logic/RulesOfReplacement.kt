@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 /**
  * Rules of Replacement apply to sub-expressions as well as whole expressions.

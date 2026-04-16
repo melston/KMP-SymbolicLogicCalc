@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 /**
  * A basic recursive descent parser to convert a string representation of a

@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 class ProblemSetParser {
     

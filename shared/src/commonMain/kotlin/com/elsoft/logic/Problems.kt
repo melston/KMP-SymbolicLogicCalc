@@ -1,4 +1,4 @@
-package logic
+package com.elsoft.logic
 
 /**
  * Represents a problem that has been authored (e.g., from a textbook or file).
