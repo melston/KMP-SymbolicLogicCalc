@@ -5,7 +5,7 @@ class ProblemSetParser {
     class ParseException(message: String, val lineNumber: Int) : Exception("Line $lineNumber: $message")
 
     /**
-     * Parses a block of text into a ProblemSet containing multiple AuthoredProblems.
+     * Parses a block of text into a ProblemSet containing multiple ProblemDefinitions.
      * 
      * Expected format:
      * <Identifier>
@@ -19,7 +19,7 @@ class ProblemSetParser {
      */
     fun parse(name: String, input: String): ProblemSet {
         val lines = input.lines()
-        val problems = mutableListOf<AuthoredProblem>()
+        val problems = mutableListOf<ProblemDefinition>()
         val exprParser = ExpressionParser()
 
         var currentId: String? = null
@@ -67,7 +67,7 @@ class ProblemSetParser {
                     State.EXPECT_CONCLUSION -> {
                         // The line after Prove: is the target conclusion
                         val conclusion = exprParser.parse(line)
-                        problems.add(AuthoredProblem(currentId!!, currentPremises, conclusion))
+                        problems.add(ProblemDefinition(currentId!!, currentPremises, conclusion))
                         parsingState = State.DONE
                     }
                     State.DONE -> {

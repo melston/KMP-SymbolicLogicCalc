@@ -1,53 +1,58 @@
 package com.elsoft.logic
 
 /**
- * Represents a problem that has been authored (e.g., from a textbook or file).
- * It does not contain a pre-computed solution, as the solution is meant to be
- * found by the user.
+ * Represents the definition of a symbolic logic problem, containing only the
+ * essential information: what is given and what needs to be proven.
+ * This is the canonical representation for any problem, whether it was
+ * authored in a file or generated dynamically.
  *
- * @param id A unique identifier for the problem within its set (e.g., "Copi 3.4 #2").
+ * @param id A unique identifier for the problem (e.g., "Copi 3.4 #2" or "Generated Problem #123").
  * @param premises A list of given expressions that are assumed to be true.
  * @param conclusion The target expression that needs to be proven from the premises.
  */
-data class AuthoredProblem(
+data class ProblemDefinition(
     val id: String,
     val premises: List<Expression>,
     val conclusion: Expression
 )
 
 /**
- * Represents a generated problem and its solution sequence.
+ * Represents a user's step-by-step solution to a given problem.
+ * The proof is initialized with the problem's premises, and the user
+ * adds new steps to derive the conclusion.
  *
- * @param premises A list of starting expressions.
- * @param conclusion The target expression to be proven.
- * @param solutionSteps The sequence of logical steps used to reach the conclusion.
+ * @param problem The problem definition this proof is attempting to solve.
+ * @param steps The list of logical steps taken by the user.
  */
-data class GeneratedProblem(
-    val premises: List<Expression>,
-    val conclusion: Expression,
-    val solutionSteps: List<Step>
-)
+data class Proof(
+    val problem: ProblemDefinition,
+    val steps: List<Step>
+) {
+    /**
+     * A single step within a proof. Each step derives a new expression
+     * by applying a rule to one or more previous steps.
+     *
+     * @param id A unique identifier for this line in the proof (e.g., "L1", "L2").
+     * @param expression The newly derived expression.
+     * @param rule The rule that was applied to derive the expression.
+     * @param parentStepIds The list of step IDs that this step depends on.
+     *                      These can reference either initial premises or previous steps.
+     */
+    data class Step(
+        val id: String,
+        val expression: Expression,
+        val rule: Rule,
+        val parentStepIds: List<String>
+    )
+}
 
 /**
  * A collection of authored problems, typically read from a single file or source.
  *
  * @param name The name of the entire problem set (e.g., "Copi Chapter 3, Section 4").
- * @param problems The list of individual problems in the set.
+ * @param problems The list of individual problem definitions in the set.
  */
 data class ProblemSet(
     val name: String,
-    val problems: List<AuthoredProblem>
-)
-
-/**
- * Represents a single step in a logical proof.
- *
- * @param derivedExpression The expression resulting from the application of a rule.
- * @param ruleUsed The logical rule applied in this step.
- * @param parentExpressions The expressions to which the rule was applied.
- */
-data class Step(
-    val derivedExpression: Expression,
-    val ruleUsed: Rule,
-    val parentExpressions: List<Expression>
+    val problems: List<ProblemDefinition>
 )

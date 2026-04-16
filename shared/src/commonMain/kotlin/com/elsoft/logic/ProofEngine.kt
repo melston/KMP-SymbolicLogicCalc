@@ -6,7 +6,7 @@ class ProofEngine(private val random: Random = Random.Default) {
     private val premiseGenerator = PremiseGenerator(random)
 
     // Generator function using DetailedRule for precise backward pruning
-    fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): GeneratedProblem {
+    fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): ProblemDefinition {
         val rules = AllRulesOfInference + AllRulesOfReplacement
         
         while (true) {
@@ -88,7 +88,8 @@ class ProofEngine(private val random: Random = Random.Default) {
             // Backward Pruning: Find all essential parents
             val usedPremises = mutableSetOf<Expression>()
             val queue = mutableListOf(conclusion)
-            val essentialSteps = mutableListOf<Step>()
+            // We use a temporary simple step list to do the reverse traversal
+            val backwardSteps = mutableListOf<Pair<Expression, Derivation>>()
             val processed = mutableSetOf<Expression>()
             
             while (queue.isNotEmpty()) {
@@ -100,9 +101,9 @@ class ProofEngine(private val random: Random = Random.Default) {
                 // Did we derive this?
                 val derivation = derivations.find { it.result == current }
                 if (derivation != null) {
-                    if (!essentialSteps.any { it.derivedExpression == derivation.result }) {
+                    if (!backwardSteps.any { it.first == derivation.result }) {
                         queue.addAll(derivation.parents)
-                        essentialSteps.add(Step(derivation.result, derivation.rule, derivation.parents))
+                        backwardSteps.add(Pair(derivation.result, derivation))
                     }
                 } else {
                     // It must be a starting premise
@@ -111,22 +112,25 @@ class ProofEngine(private val random: Random = Random.Default) {
             }
             
             // Check if we hit the user's required rules
-            val usedRules = essentialSteps.map { it.ruleUsed }.toSet()
+            val usedRules = backwardSteps.map { it.second.rule }.toSet()
             val containsRequiredRules = requiredRules.all { it in usedRules }
             
             // Ensure the problem isn't completely trivial (e.g. given P prove P, or only 1 step)
             // also ensures we generated at least `targetSteps/2` essential steps so the problem is meaty.
             val premisesList = usedPremises.toList()
             if (containsRequiredRules && 
-                essentialSteps.size >= maxOf(2, targetSteps / 2) && 
+                backwardSteps.size >= maxOf(2, targetSteps / 2) && 
                 !usedPremises.contains(conclusion) &&
                 !hasObviousConflicts(premisesList)
             ) {
-                return GeneratedProblem(
+                // To keep the generator interface simple, we just return the core ProblemDefinition.
+                // The backward steps (the solution) could theoretically be packaged as a Proof object, 
+                // but since this engine's goal is just to generate solvable problems, 
+                // returning the ProblemDefinition is sufficient for the user to then try to solve.
+                return ProblemDefinition(
+                    id = "Generated Problem", // Could use UUID
                     premises = premisesList,
-                    conclusion = conclusion,
-                    // the essential steps are collected backwards, so reverse them to show the forward progression
-                    solutionSteps = essentialSteps.reversed() 
+                    conclusion = conclusion
                 )
             }
             
