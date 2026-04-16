@@ -6,7 +6,7 @@ class ProofEngine(private val random: Random = Random.Default) {
     private val premiseGenerator = PremiseGenerator(random)
 
     // Generator function using DetailedRule for precise backward pruning
-    fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): Problem {
+    fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): GeneratedProblem {
         val rules = AllRulesOfInference + AllRulesOfReplacement
         
         while (true) {
@@ -122,7 +122,7 @@ class ProofEngine(private val random: Random = Random.Default) {
                 !usedPremises.contains(conclusion) &&
                 !hasObviousConflicts(premisesList)
             ) {
-                return Problem(
+                return GeneratedProblem(
                     premises = premisesList,
                     conclusion = conclusion,
                     // the essential steps are collected backwards, so reverse them to show the forward progression

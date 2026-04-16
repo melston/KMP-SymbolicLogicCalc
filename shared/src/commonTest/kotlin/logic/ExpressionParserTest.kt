@@ -107,7 +107,7 @@ class ExpressionParserTest {
     }
 }
 
-class ProblemSetParserTest {
+class GeneratedProblemSetParserTest {
     
     private val parser = ProblemSetParser()
     

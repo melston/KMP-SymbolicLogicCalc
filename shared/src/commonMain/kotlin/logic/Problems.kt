@@ -16,6 +16,19 @@ data class AuthoredProblem(
 )
 
 /**
+ * Represents a generated problem and its solution sequence.
+ *
+ * @param premises A list of starting expressions.
+ * @param conclusion The target expression to be proven.
+ * @param solutionSteps The sequence of logical steps used to reach the conclusion.
+ */
+data class GeneratedProblem(
+    val premises: List<Expression>,
+    val conclusion: Expression,
+    val solutionSteps: List<Step>
+)
+
+/**
  * A collection of authored problems, typically read from a single file or source.
  *
  * @param name The name of the entire problem set (e.g., "Copi Chapter 3, Section 4").
@@ -24,4 +37,17 @@ data class AuthoredProblem(
 data class ProblemSet(
     val name: String,
     val problems: List<AuthoredProblem>
+)
+
+/**
+ * Represents a single step in a logical proof.
+ *
+ * @param derivedExpression The expression resulting from the application of a rule.
+ * @param ruleUsed The logical rule applied in this step.
+ * @param parentExpressions The expressions to which the rule was applied.
+ */
+data class Step(
+    val derivedExpression: Expression,
+    val ruleUsed: Rule,
+    val parentExpressions: List<Expression>
 )
