@@ -1,9 +1,14 @@
-package com.elsoft.symlogic.logic
+package com.elsoft.symlogic.problems
 
+import com.elsoft.symlogic.logic.Expression
 import kotlin.random.Random
 
+/**
+ * Responsible for generating random logical expressions and initial premise pools
+ * used by the [ProofEngine] to create symbolic logic problems.
+ */
 class PremiseGenerator(private val random: Random = Random.Default) {
-    
+
     private val variables = listOf("p", "q", "r", "s", "t").map { Expression.Variable(it) }
 
     /**
@@ -12,9 +17,9 @@ class PremiseGenerator(private val random: Random = Random.Default) {
      */
     fun generateInitialPool(poolSize: Int = 4, maxDepth: Int = 2): List<Expression> {
         val pool = mutableSetOf<Expression>()
-        
+
         // Ensure we at least have a couple of simple variables so rules can fire
-        // Since we are adding to a set, if it randomly picks the same variable twice, 
+        // Since we are adding to a set, if it randomly picks the same variable twice,
         // the while loop below will naturally fill in the missing slots until we reach `poolSize`.
         if (poolSize >= 2) {
             pool.add(variables.random(random))

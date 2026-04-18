@@ -1,5 +1,6 @@
 package com.elsoft.symlogic.logic
 
+import com.elsoft.symlogic.problems.parsers.ExpressionParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -1,5 +1,8 @@
 package com.elsoft.symlogic.logic
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
 // Defines exactly which premises led to a derived expression
 data class Derivation(
     val result: Expression,
@@ -7,7 +10,8 @@ data class Derivation(
     val parents: List<Expression>
 )
 
-interface Rule {
+@Serializable
+sealed interface Rule { // Changed to sealed interface and made Serializable
     val name: String
     
     /**

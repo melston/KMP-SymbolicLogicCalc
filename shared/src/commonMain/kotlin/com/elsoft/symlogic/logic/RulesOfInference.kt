@@ -1,5 +1,10 @@
 package com.elsoft.symlogic.logic
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
+@SerialName("ModusPonens")
 object ModusPonens : Rule {
     override val name = "Modus Ponens"
 
@@ -32,6 +37,8 @@ object ModusPonens : Rule {
     }
 }
 
+@Serializable
+@SerialName("ModusTollens")
 object ModusTollens : Rule {
     override val name = "Modus Tollens"
 
@@ -65,6 +72,8 @@ object ModusTollens : Rule {
     }
 }
 
+@Serializable
+@SerialName("HypotheticalSyllogism")
 object HypotheticalSyllogism : Rule {
     override val name = "Hypothetical Syllogism"
 
@@ -99,6 +108,8 @@ object HypotheticalSyllogism : Rule {
     }
 }
 
+@Serializable
+@SerialName("DisjunctiveSyllogism")
 object DisjunctiveSyllogism : Rule {
     override val name = "Disjunctive Syllogism"
 
@@ -146,6 +157,8 @@ object DisjunctiveSyllogism : Rule {
     }
 }
 
+@Serializable
+@SerialName("Simplification")
 object Simplification : Rule {
     override val name = "Simplification"
 
@@ -168,6 +181,8 @@ object Simplification : Rule {
     }
 }
 
+@Serializable
+@SerialName("Conjunction")
 object Conjunction : Rule {
     override val name = "Conjunction"
 
@@ -194,6 +209,8 @@ object Conjunction : Rule {
     }
 }
 
+@Serializable
+@SerialName("Addition")
 object Addition : Rule {
     override val name = "Addition"
     
@@ -251,6 +268,8 @@ object Addition : Rule {
     }
 }
 
+@Serializable
+@SerialName("ConstructiveDilemma")
 object ConstructiveDilemma : Rule {
     override val name = "Constructive Dilemma"
 
@@ -291,6 +310,8 @@ object ConstructiveDilemma : Rule {
     }
 }
 
+@Serializable
+@SerialName("DestructiveDilemma")
 object DestructiveDilemma : Rule {
     override val name = "Destructive Dilemma"
 

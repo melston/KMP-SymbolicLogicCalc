@@ -1,5 +1,8 @@
 package com.elsoft.symlogic.logic
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
 /**
  * Rules of Replacement apply to sub-expressions as well as whole expressions.
  * They are bi-directional logically, but for a generator, we treat them as
@@ -76,6 +79,7 @@ fun Expression.replaceAll(
     return results
 }
 
+// Base class for replacement rules, providing a common validation mechanism
 abstract class BaseReplacementRule : ReplacementRule {
     override fun apply(expressions: List<Expression>): List<Derivation> {
         val results = mutableListOf<Derivation>()
@@ -85,16 +89,20 @@ abstract class BaseReplacementRule : ReplacementRule {
         return results
     }
 
+    // For replacement rules, validation typically involves checking if the derived expression
+    // is a valid transformation of the single parent expression.
     override fun validate(derivedExpression: Expression, parentExpressions: List<Expression>): Boolean {
         if (parentExpressions.size != 1) return false
         val parent = parentExpressions.first()
-        // Replacement rules can be applied to any sub-expression. 
-        // We validate by checking if the derived expression is one of the possible 
-        // applications of the rule to the parent.
+
+        // To validate, we apply the rule to the parent expression and check if the derivedExpression
+        // is among the possible results. This handles both root and sub-expression replacements.
         return applyToExpression(parent).any { it.result == derivedExpression }
     }
 }
 
+@Serializable
+@SerialName("DeMorgan")
 object DeMorgan : BaseReplacementRule() {
     override val name = "De Morgan's Laws"
 
@@ -127,6 +135,8 @@ object DeMorgan : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Commutativity")
 object Commutativity : BaseReplacementRule() {
     override val name = "Commutativity"
 
@@ -142,6 +152,8 @@ object Commutativity : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Associativity")
 object Associativity : BaseReplacementRule() {
     override val name = "Associativity"
 
@@ -174,6 +186,8 @@ object Associativity : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Distribution")
 object Distribution : BaseReplacementRule() {
     override val name = "Distribution"
 
@@ -206,6 +220,8 @@ object Distribution : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("DoubleNegation")
 object DoubleNegation : BaseReplacementRule() {
     override val name = "Double Negation"
 
@@ -225,6 +241,8 @@ object DoubleNegation : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Transposition")
 object Transposition : BaseReplacementRule() {
     override val name = "Transposition"
 
@@ -239,6 +257,8 @@ object Transposition : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("MaterialImplication")
 object MaterialImplication : BaseReplacementRule() {
     override val name = "Material Implication"
 
@@ -259,6 +279,8 @@ object MaterialImplication : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("MaterialEquivalence")
 object MaterialEquivalence : BaseReplacementRule() {
     override val name = "Material Equivalence"
 
@@ -281,6 +303,8 @@ object MaterialEquivalence : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Exportation")
 object Exportation : BaseReplacementRule() {
     override val name = "Exportation"
 
@@ -302,6 +326,8 @@ object Exportation : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Tautology")
 object Tautology : BaseReplacementRule() {
     override val name = "Tautology"
 

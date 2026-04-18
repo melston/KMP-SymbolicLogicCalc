@@ -1,5 +1,6 @@
 package com.elsoft.symlogic.logic
 
+import com.elsoft.symlogic.problems.ProofEngine
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.test.assertNotNull

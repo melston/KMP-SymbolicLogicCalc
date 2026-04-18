@@ -1,10 +1,18 @@
-package com.elsoft.symlogic.logic
+package com.elsoft.symlogic.problems
+
+import com.elsoft.symlogic.logic.Expression
 
 sealed class ValidationResult {
     object Valid : ValidationResult()
     data class Invalid(val stepId: String, val reason: String) : ValidationResult()
 }
 
+/**
+ * Provides logic to verify the mathematical validity of a [Proof].
+ * It ensures that every derivation follows the rules of logic,
+ * that scopes (sub-proofs) are correctly managed, and that the
+ * final expression matches the intended conclusion.
+ */
 class ProofValidator {
 
     /**
@@ -136,9 +144,9 @@ class ProofValidator {
                     val closedScopeIds = scopeStack.removeLast()
                     for (id in closedScopeIds) {
                         activeExpressions.remove(id)
+                        // Ensure discharged assumptions are removed from the active tracking list
+                        activeAssumptionIds.remove(id)
                     }
-                    // Also remove the discharged assumptions from the active tracking list
-                    activeAssumptionIds.removeAll(step.assumptionIds)
 
                     // 6. The Implication Introduction step itself belongs to the *parent* scope
                     //    because it represents the result of the entire sub-proof block.

@@ -1,12 +1,16 @@
-package com.elsoft.symlogic.logic
+package com.elsoft.symlogic.problems.parsers
+
+import com.elsoft.symlogic.logic.Expression
+import com.elsoft.symlogic.problems.ProblemDefinition
+import com.elsoft.symlogic.problems.ProblemSet
 
 class ProblemSetParser {
-    
+
     class ParseException(message: String, val lineNumber: Int) : Exception("Line $lineNumber: $message")
 
     /**
      * Parses a block of text into a ProblemSet containing multiple ProblemDefinitions.
-     * 
+     *
      * Expected format:
      * <Identifier>
      * Premises:
@@ -14,7 +18,7 @@ class ProblemSetParser {
      *     <WFF>
      * Prove:
      *     <WFF>
-     * 
+     *
      * Problems can be separated by blank lines or a line starting with three or more dashes (e.g., "---").
      */
     fun parse(name: String, input: String): ProblemSet {
@@ -33,7 +37,7 @@ class ProblemSetParser {
 
             // Treat a line starting with 3 dashes as a visual separator (just like a blank line)
             val isSeparator = line.startsWith("---")
-            
+
             // Skip empty lines or visual separators, unless we just finished a problem and are looking for the next identifier
             if (line.isEmpty() || isSeparator) {
                 if (parsingState == State.DONE) {

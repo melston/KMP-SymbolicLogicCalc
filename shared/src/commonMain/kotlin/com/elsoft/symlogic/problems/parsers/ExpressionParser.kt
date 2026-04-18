@@ -1,4 +1,6 @@
-package com.elsoft.symlogic.logic
+package com.elsoft.symlogic.problems.parsers
+
+import com.elsoft.symlogic.logic.Expression
 
 /**
  * A basic recursive descent parser to convert a string representation of a
@@ -87,7 +89,7 @@ class ExpressionParser {
     // Implies (->)
     private fun parseImplies(tokens: List<String>): Pair<Expression, List<String>> {
         var (expr, remaining) = parseOr(tokens)
-        // Implies is typically right-associative, but for simplicity we'll do left-associative or 
+        // Implies is typically right-associative, but for simplicity we'll do left-associative or
         // require explicit parens for nested implications. Left-associative for now.
         while (remaining.isNotEmpty() && remaining[0] == "->") {
             val (rightExpr, rightRemaining) = parseOr(remaining.drop(1))

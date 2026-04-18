@@ -1,5 +1,10 @@
 package com.elsoft.symlogic.logic
 
+import com.elsoft.symlogic.problems.parsers.ExpressionParser
+import com.elsoft.symlogic.problems.ProblemDefinition
+import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProofValidator
+import com.elsoft.symlogic.problems.ValidationResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -58,7 +63,7 @@ class ProofValidatorTest {
                     id = "L1",
                     expression = p.parse("P | Q"),
                     rule = Addition,
-                    parentStepIds = listOf("A1") 
+                    parentStepIds = listOf("A1")
                 ),
                 Proof.ProofStep.ImplicationIntroductionStep(
                     id = "L2",
@@ -104,7 +109,7 @@ class ProofValidatorTest {
                     id = "L1",
                     expression = p.parse("P & Q"),
                     rule = Conjunction,
-                    parentStepIds = listOf("A1", "A2") 
+                    parentStepIds = listOf("A1", "A2")
                 ),
                 Proof.ProofStep.RegularStep(
                     id = "L2",
@@ -149,7 +154,7 @@ class ProofValidatorTest {
                     id = "L2",
                     expression = p.parse("P"),
                     rule = Addition, // Just some rule trying to illegally use A1
-                    parentStepIds = listOf("A1") 
+                    parentStepIds = listOf("A1")
                 )
             )
         )
