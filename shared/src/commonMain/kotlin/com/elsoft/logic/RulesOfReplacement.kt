@@ -84,6 +84,15 @@ abstract class BaseReplacementRule : ReplacementRule {
         }
         return results
     }
+
+    override fun validate(derivedExpression: Expression, parentExpressions: List<Expression>): Boolean {
+        if (parentExpressions.size != 1) return false
+        val parent = parentExpressions.first()
+        // Replacement rules can be applied to any sub-expression. 
+        // We validate by checking if the derived expression is one of the possible 
+        // applications of the rule to the parent.
+        return applyToExpression(parent).any { it.result == derivedExpression }
+    }
 }
 
 object DeMorgan : BaseReplacementRule() {
@@ -209,7 +218,8 @@ object DoubleNegation : BaseReplacementRule() {
                         e.operand.operand
                     } else null
                 }
-                else -> null
+                // P -> ~~P
+                else -> Expression.Not(Expression.Not(e))
             }
         }
     }
@@ -306,8 +316,8 @@ object Tautology : BaseReplacementRule() {
                 is Expression.And -> {
                     if (e.left == e.right) e.left else null
                 }
-                // P == P & P or P | P (We'll generate both)
-                else -> null // Too noisy for forward generation without constraints
+                // P == P & P or P | P
+                else -> null // Note: We could return List here but replaceAll expects single return.
             }
         }
     }
