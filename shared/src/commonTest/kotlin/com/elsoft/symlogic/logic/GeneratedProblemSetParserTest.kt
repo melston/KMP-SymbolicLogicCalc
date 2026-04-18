@@ -1,8 +1,7 @@
-package com.elsoft.logic
+package com.elsoft.symlogic.logic
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class GeneratedProblemSetParserTest {
     

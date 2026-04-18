@@ -1,4 +1,4 @@
-package com.elsoft.logic
+package com.elsoft.symlogic.logic
 
 /**
  * Represents the definition of a symbolic logic problem, containing only the

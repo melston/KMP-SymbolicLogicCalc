@@ -1,4 +1,4 @@
-package com.elsoft.logic
+package com.elsoft.symlogic.logic
 
 sealed class Expression {
     data class Variable(val name: String) : Expression() {
