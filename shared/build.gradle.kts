@@ -20,6 +20,7 @@ kotlin {
                 implementation(libs.compose.material)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.resources)
+                implementation(libs.compose.icons)
             }
         }
         val commonTest by getting {
@@ -32,6 +33,7 @@ kotlin {
             dependencies {
                 // Android-specific Compose dependencies
                 implementation(compose.preview)
+                implementation(libs.androidx.activityCompose) // This is the big one
             }
         }
         val androidUnitTest by getting

@@ -1,36 +1,35 @@
-package com.elsoft.symlogic.logic
+package com.elsoft.symlogic.problems
 
-import com.elsoft.symlogic.problems.parsers.ExpressionParser
-import com.elsoft.symlogic.problems.ProblemDefinition
-import com.elsoft.symlogic.problems.Proof
-import com.elsoft.symlogic.problems.ProofValidator
-import com.elsoft.symlogic.problems.ValidationResult
+import com.elsoft.symlogic.logic.Expression
+import com.elsoft.symlogic.logic.ModusPonens
+import com.elsoft.symlogic.logic.Addition
+import com.elsoft.symlogic.logic.Conjunction
+import com.elsoft.symlogic.logic.Simplification
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ProofValidatorTest {
-    val p = ExpressionParser()
 
     @Test
     fun testValidProof_ModusPonens() {
         val problem = ProblemDefinition(
             id = "MP-1",
             premises = listOf(
-                p.parse("P -> Q"),
-                p.parse("P")
+                Expression.Implies(Expression.Variable("P"), Expression.Variable("Q")),
+                Expression.Variable("P")
             ),
-            conclusion = p.parse("Q")
+            conclusion = Expression.Variable("Q")
         )
 
         val proof = Proof(
             problem = problem,
             steps = listOf(
                 Proof.ProofStep.RegularStep(
-                    id = "L1",
-                    expression = p.parse("Q"),
+                    id = 3, // Premises are 1 and 2
+                    expression = Expression.Variable("Q"),
                     rule = ModusPonens,
-                    parentStepIds = listOf("P1", "P2")
+                    parentStepIds = listOf(1, 2)
                 )
             )
         )
@@ -47,8 +46,8 @@ class ProofValidatorTest {
             id = "II-1",
             premises = listOf(),
             conclusion = Expression.Implies(
-                p.parse("P"),
-                p.parse("P | Q")
+                Expression.Variable("P"), 
+                Expression.Or(Expression.Variable("P"), Expression.Variable("Q"))
             )
         )
 
@@ -56,23 +55,23 @@ class ProofValidatorTest {
             problem = problem,
             steps = listOf(
                 Proof.ProofStep.Assumption(
-                    id = "A1",
-                    expression = p.parse("P")
+                    id = 1,
+                    expression = Expression.Variable("P")
                 ),
                 Proof.ProofStep.RegularStep(
-                    id = "L1",
-                    expression = p.parse("P | Q"),
+                    id = 2,
+                    expression = Expression.Or(Expression.Variable("P"), Expression.Variable("Q")),
                     rule = Addition,
-                    parentStepIds = listOf("A1")
+                    parentStepIds = listOf(1) 
                 ),
                 Proof.ProofStep.ImplicationIntroductionStep(
-                    id = "L2",
+                    id = 3,
                     expression = Expression.Implies(
-                        p.parse("P"),
-                        p.parse("P | Q")
+                        Expression.Variable("P"), 
+                        Expression.Or(Expression.Variable("P"), Expression.Variable("Q"))
                     ),
-                    assumptionIds = listOf("A1"),
-                    conclusionOfSubProofId = "L1"
+                    assumptionIds = listOf(1),
+                    conclusionOfSubProofId = 2
                 )
             )
         )
@@ -89,8 +88,8 @@ class ProofValidatorTest {
             id = "II-2",
             premises = listOf(),
             conclusion = Expression.Implies(
-                p.parse("P & Q"),
-                p.parse("P")
+                Expression.And(Expression.Variable("P"), Expression.Variable("Q")), 
+                Expression.Variable("P")
             )
         )
 
@@ -98,30 +97,33 @@ class ProofValidatorTest {
             problem = problem,
             steps = listOf(
                 Proof.ProofStep.Assumption(
-                    id = "A1",
-                    expression = p.parse("P")
+                    id = 1,
+                    expression = Expression.Variable("P")
                 ),
                 Proof.ProofStep.Assumption(
-                    id = "A2",
-                    expression = p.parse("Q")
+                    id = 2,
+                    expression = Expression.Variable("Q")
                 ),
                 Proof.ProofStep.RegularStep(
-                    id = "L1",
-                    expression = p.parse("P & Q"),
+                    id = 3,
+                    expression = Expression.And(Expression.Variable("P"), Expression.Variable("Q")),
                     rule = Conjunction,
-                    parentStepIds = listOf("A1", "A2")
+                    parentStepIds = listOf(1, 2) 
                 ),
                 Proof.ProofStep.RegularStep(
-                    id = "L2",
-                    expression = p.parse("P"),
+                    id = 4,
+                    expression = Expression.Variable("P"),
                     rule = Simplification,
-                    parentStepIds = listOf("L1")
+                    parentStepIds = listOf(3)
                 ),
                 Proof.ProofStep.ImplicationIntroductionStep(
-                    id = "L3",
-                    expression = p.parse("(P & Q) -> P"),
-                    assumptionIds = listOf("A1", "A2"),
-                    conclusionOfSubProofId = "L2"
+                    id = 5,
+                    expression = Expression.Implies(
+                        Expression.And(Expression.Variable("P"), Expression.Variable("Q")), 
+                        Expression.Variable("P")
+                    ),
+                    assumptionIds = listOf(1, 2),
+                    conclusionOfSubProofId = 4
                 )
             )
         )
@@ -136,25 +138,25 @@ class ProofValidatorTest {
         val problem = ProblemDefinition(
             id = "Invalid-1",
             premises = listOf(),
-            conclusion = p.parse("P")
+            conclusion = Expression.Variable("P")
         )
 
         val proof = Proof(
             problem = problem,
             steps = listOf(
-                Proof.ProofStep.Assumption(id = "A1", expression = Expression.Variable("P")),
+                Proof.ProofStep.Assumption(id = 1, expression = Expression.Variable("P")),
                 Proof.ProofStep.ImplicationIntroductionStep(
-                    id = "L1",
-                    expression = p.parse("(P -> P)"),
-                    assumptionIds = listOf("A1"),
-                    conclusionOfSubProofId = "A1"
+                    id = 2,
+                    expression = Expression.Implies(Expression.Variable("P"), Expression.Variable("P")),
+                    assumptionIds = listOf(1),
+                    conclusionOfSubProofId = 1
                 ),
-                // Try to use A1 after the sub-proof was closed!
+                // Try to use step 1 after the sub-proof was closed!
                 Proof.ProofStep.RegularStep(
-                    id = "L2",
-                    expression = p.parse("P"),
-                    rule = Addition, // Just some rule trying to illegally use A1
-                    parentStepIds = listOf("A1")
+                    id = 3,
+                    expression = Expression.Variable("P"),
+                    rule = Simplification, // Just some rule trying to illegally use step 1
+                    parentStepIds = listOf(1) 
                 )
             )
         )
@@ -162,7 +164,7 @@ class ProofValidatorTest {
         val validator = ProofValidator()
         val result = validator.validate(proof)
         assertTrue(result is ValidationResult.Invalid)
-        // Should complain about A1 not being accessible
+        // Should complain about step 1 not being accessible
         assertTrue(result.reason.contains("not accessible") || result.reason.contains("does not exist"))
     }
 }

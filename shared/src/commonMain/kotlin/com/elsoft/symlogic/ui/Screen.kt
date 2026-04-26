@@ -1,11 +1,14 @@
 package com.elsoft.symlogic.ui
 
+import com.elsoft.symlogic.problems.ProblemDefinition
+
 /**
  * Defines the different screens available in the application.
+ * Using a sealed class allows screens to carry data (e.g., the problem for the solver screen).
  */
-enum class Screen {
-    MAIN_MENU,
-    GENERATED_PROBLEMS,
-    PRE_WRITTEN_PROBLEMS,
-    SOLVER
+sealed class Screen {
+    data object MainMenu : Screen()
+    data object GeneratedProblems : Screen()
+    data object PreWrittenProblems : Screen()
+    data class Solver(val problem: ProblemDefinition) : Screen()
 }

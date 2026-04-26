@@ -1,6 +1,7 @@
 package com.elsoft.symlogic.problems.parsers
 
 import com.elsoft.symlogic.logic.Expression
+import com.elsoft.symlogic.logic.normalizeWffString
 
 /**
  * A basic recursive descent parser to convert a string representation of a
@@ -19,10 +20,12 @@ class ExpressionParser {
     class ParseException(message: String) : Exception(message)
 
     /**
-     * Parses a string like `(p & ~q) -> r` into an Expression.
+     * Parses a string like `(p & ~q) -> r` or `(p ∧ q) → r` into an Expression.
+     * It first normalizes the string to a canonical ASCII format.
      */
     fun parse(input: String): Expression {
-        val tokens = tokenize(input)
+        val normalizedInput = normalizeWffString(input)
+        val tokens = tokenize(normalizedInput)
         if (tokens.isEmpty()) throw ParseException("Empty input string")
         val (expr, remainingTokens) = parseIff(tokens)
         if (remainingTokens.isNotEmpty()) {
@@ -89,8 +92,6 @@ class ExpressionParser {
     // Implies (->)
     private fun parseImplies(tokens: List<String>): Pair<Expression, List<String>> {
         var (expr, remaining) = parseOr(tokens)
-        // Implies is typically right-associative, but for simplicity we'll do left-associative or
-        // require explicit parens for nested implications. Left-associative for now.
         while (remaining.isNotEmpty() && remaining[0] == "->") {
             val (rightExpr, rightRemaining) = parseOr(remaining.drop(1))
             expr = Expression.Implies(expr, rightExpr)

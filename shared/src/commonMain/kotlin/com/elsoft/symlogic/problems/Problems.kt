@@ -15,36 +15,52 @@ data class ProblemDefinition(
 @Serializable
 data class Proof(
     val problem: ProblemDefinition,
-    val steps: List<ProofStep>
+    val steps: List<ProofStep> = emptyList()
 ) {
+    /**
+     * Returns the next available ID for a new step.
+     * It's calculated as the number of premises + the number of existing steps + 1.
+     */
+    fun getNextStepId(): Int {
+        return problem.premises.size + steps.size + 1
+    }
+
+    /**
+     * Creates a new Proof instance with the added step.
+     * This immutable approach is safer for state management in Compose.
+     */
+    fun withNewStep(step: ProofStep): Proof {
+        return this.copy(steps = this.steps + step)
+    }
+
     @Serializable
     sealed class ProofStep {
-        abstract val id: String
+        abstract val id: Int
         abstract val expression: Expression
 
         @Serializable
         @SerialName("RegularStep")
         data class RegularStep(
-            override val id: String,
+            override val id: Int,
             override val expression: Expression,
-            val rule: Rule, // Rule must also be serializable
-            val parentStepIds: List<String>
+            val rule: Rule,
+            val parentStepIds: List<Int>
         ) : ProofStep()
 
         @Serializable
         @SerialName("Assumption")
         data class Assumption(
-            override val id: String,
+            override val id: Int,
             override val expression: Expression
         ) : ProofStep()
 
         @Serializable
         @SerialName("ImplicationIntroductionStep")
         data class ImplicationIntroductionStep(
-            override val id: String,
+            override val id: Int,
             override val expression: Expression,
-            val assumptionIds: List<String>,
-            val conclusionOfSubProofId: String
+            val assumptionIds: List<Int>,
+            val conclusionOfSubProofId: Int
         ) : ProofStep()
     }
 }
