@@ -17,19 +17,47 @@ data class Proof(
     val problem: ProblemDefinition,
     val steps: List<ProofStep> = emptyList()
 ) {
-    /**
-     * Returns the next available ID for a new step.
-     * It's calculated as the number of premises + the number of existing steps + 1.
-     */
-    fun getNextStepId(): Int {
+    fun addAssumption(wff: Expression): Proof {
+        val assumption = ProofStep.Assumption(getNextStepId(), wff)
+        return withNewStep(assumption)
+    }
+
+    fun addStep(wff: Expression, rule: Rule, parentStepIds: List<Int>): Proof {
+        val step = ProofStep.RegularStep(getNextStepId(), wff, rule, parentStepIds)
+        return withNewStep(step)
+    }
+
+    fun addImplicationIntroductionStep(assumptionIds: List<Int>, conclusionId: Int): Proof {
+        // The expression for this step will be constructed by the validator/UI logic
+        // For now, we can use a placeholder or derive it if possible.
+        // Let's assume the calling code will provide the correct expression.
+        // A more robust implementation might derive it here.
+        val assumptionExpressions = assumptionIds.mapNotNull { id ->
+            steps.find { it.id == id }?.expression 
+        }
+        val conclusionExpression = steps.find { it.id == conclusionId }?.expression
+        
+        val expression = if (assumptionExpressions.isNotEmpty() && conclusionExpression != null) {
+            val combinedAssumptions = if (assumptionExpressions.size == 1) {
+                assumptionExpressions.first()
+            } else {
+                assumptionExpressions.reduce { acc, expr -> Expression.And(acc, expr) }
+            }
+            Expression.Implies(combinedAssumptions, conclusionExpression)
+        } else {
+            // Placeholder, this should be handled more gracefully
+            Expression.Variable("Error: Could not construct II expression")
+        }
+
+        val step = ProofStep.ImplicationIntroductionStep(getNextStepId(), expression, assumptionIds, conclusionId)
+        return withNewStep(step)
+    }
+
+    private fun getNextStepId(): Int {
         return problem.premises.size + steps.size + 1
     }
 
-    /**
-     * Creates a new Proof instance with the added step.
-     * This immutable approach is safer for state management in Compose.
-     */
-    fun withNewStep(step: ProofStep): Proof {
+    private fun withNewStep(step: ProofStep): Proof {
         return this.copy(steps = this.steps + step)
     }
 

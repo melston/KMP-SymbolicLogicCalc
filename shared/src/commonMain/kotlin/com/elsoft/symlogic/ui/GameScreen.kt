@@ -1,35 +1,231 @@
 package com.elsoft.symlogic.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Scaffold
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.elsoft.symlogic.logic.Expression
+import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProofValidator
+import com.elsoft.symlogic.problems.ValidationResult
+import com.elsoft.symlogic.problems.parsers.ExpressionParser
 
 @Composable
-fun GameScreen(isDesktop: Boolean) {
+fun GameScreen(initialProof: Proof) {
+    var proof by remember { mutableStateOf(initialProof) }
+    val validator = remember { ProofValidator() }
+    val expressionParser = remember { ExpressionParser() }
+    var validationError by remember { mutableStateOf<String?>(null) }
+    var showInputDialog by remember { mutableStateOf(false) }
+    var showProofCompleteDialog by remember { mutableStateOf(false) }
+    var selectedStepIds by remember { mutableStateOf(emptySet<Int>()) }
+
+    val indentationLevel = proof.steps.count { it is Proof.ProofStep.Assumption } -
+                           proof.steps.count { it is Proof.ProofStep.ImplicationIntroductionStep }
+    val isSubProofActive = indentationLevel > 0
+
     Scaffold(
-        bottomBar = {
-            if (!isDesktop) {
-                // Mobile: Palette sits at the bottom
-                LogicPalette(onSymbolSelected = { /* update state */ })
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showInputDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Add Proof Step")
             }
         }
-    ) { padding ->
-        Row(Modifier.padding(padding)) {
-            // Main Game Area
-            Box(Modifier.weight(1f)) { /* Your Logic Board */ }
-
-            if (isDesktop) {
-                // Desktop: Palette sits on the right
-                LogicPalette(
-                    onSymbolSelected = { /* update state */ },
-                    modifier = Modifier.width(150.dp)
+    ) { paddingValues ->
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
+            // Proof Display
+            Text("Premises:", style = MaterialTheme.typography.h6)
+            proof.problem.premises.forEachIndexed { index, premise ->
+                val id = index + 1
+                ProofStepRow(
+                    id = id,
+                    expression = premise.toString(),
+                    justification = "Premise",
+                    indentationLevel = 0,
+                    isSelected = selectedStepIds.contains(id),
+                    onToggleSelection = {
+                        selectedStepIds = if (selectedStepIds.contains(id)) selectedStepIds - id else selectedStepIds + id
+                    }
                 )
             }
+            Spacer(Modifier.height(8.dp))
+            Divider(thickness = 2.dp)
+            Spacer(Modifier.height(8.dp))
+            Text("Prove: ${proof.problem.conclusion}", style = MaterialTheme.typography.h6)
+            Spacer(Modifier.height(16.dp))
+
+            var currentIndent by remember { mutableStateOf(0) }
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(proof.steps.size) { index ->
+                    val step = proof.steps[index]
+                    if (step is Proof.ProofStep.ImplicationIntroductionStep) currentIndent--
+                    val justification = when (step) {
+                        is Proof.ProofStep.RegularStep -> "${step.rule.name} ${step.parentStepIds.joinToString()}"
+                        is Proof.ProofStep.Assumption -> "Assumption"
+                        is Proof.ProofStep.ImplicationIntroductionStep -> "II ${step.assumptionIds.joinToString()}-${step.conclusionOfSubProofId}"
+                    }
+                    ProofStepRow(
+                        id = step.id,
+                        expression = step.expression.toString(),
+                        justification = justification,
+                        indentationLevel = currentIndent,
+                        isSelected = selectedStepIds.contains(step.id),
+                        onToggleSelection = { id ->
+                            selectedStepIds = if (selectedStepIds.contains(id)) selectedStepIds - id else selectedStepIds + id
+                        }
+                    )
+                    if (step is Proof.ProofStep.Assumption) currentIndent++
+                }
+            }
         }
+
+        // Input Dialog
+        if (showInputDialog) {
+            val selectedExpressions = remember(selectedStepIds, proof) {
+                val allSteps = (proof.problem.premises.mapIndexed { index, expr -> (index + 1) to expr } +
+                                proof.steps.map { it.id to it.expression }).toMap()
+                selectedStepIds.mapNotNull { id -> allSteps[id]?.let { id to it } }.toMap()
+            }
+
+            Dialog(onDismissRequest = { showInputDialog = false }) {
+                Surface(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = MaterialTheme.shapes.medium) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Add New Step", style = MaterialTheme.typography.h6)
+                        Spacer(Modifier.height(16.dp))
+                        
+                        ProofInput(
+                            selectedParentExpressions = selectedExpressions,
+                            isSubProofActive = isSubProofActive,
+                            onAddStep = { expressionStr, rule, parentIdsStr ->
+                                validationError = null
+                                try {
+                                    val expression = expressionParser.parse(expressionStr)
+                                    val parentIds = parentIdsStr.split(",").mapNotNull { it.trim().toIntOrNull() }
+                                    val newProof = proof.addStep(expression, rule, parentIds)
+                                    
+                                    when (val result = validator.validate(newProof)) {
+                                        is ValidationResult.Valid -> {
+                                            proof = newProof
+                                            showInputDialog = false
+                                            selectedStepIds = emptySet()
+                                            if (newProof.steps.last().expression == newProof.problem.conclusion) {
+                                                showProofCompleteDialog = true
+                                            }
+                                        }
+                                        is ValidationResult.Invalid -> validationError = "Error in step ${result.stepId}: ${result.reason}"
+                                    }
+                                } catch (e: Exception) {
+                                    validationError = e.message
+                                }
+                            },
+                            onAddAssumption = { expressionStr ->
+                                validationError = null
+                                try {
+                                    val expression = expressionParser.parse(expressionStr)
+                                    val newProof = proof.addAssumption(expression)
+                                    
+                                    when (val result = validator.validate(newProof)) {
+                                        is ValidationResult.Valid -> {
+                                            proof = newProof
+                                            showInputDialog = false
+                                            selectedStepIds = emptySet()
+                                        }
+                                        is ValidationResult.Invalid -> validationError = "Error in step ${result.stepId}: ${result.reason}"
+                                    }
+                                } catch (e: Exception) {
+                                    validationError = e.message
+                                }
+                            },
+                            onCloseSubProof = {
+                                validationError = null
+                                try {
+                                    val activeAssumptions = proof.steps.filterIsInstance<Proof.ProofStep.Assumption>()
+                                        .filterNot { assumption ->
+                                            proof.steps.filterIsInstance<Proof.ProofStep.ImplicationIntroductionStep>()
+                                                .any { it.assumptionIds.contains(assumption.id) }
+                                        }
+                                    
+                                    if (activeAssumptions.isNotEmpty() && proof.steps.isNotEmpty()) {
+                                        val newProof = proof.addImplicationIntroductionStep(
+                                            assumptionIds = activeAssumptions.map { it.id },
+                                            conclusionId = proof.steps.last().id
+                                        )
+                                        
+                                        when (val result = validator.validate(newProof)) {
+                                            is ValidationResult.Valid -> {
+                                                proof = newProof
+                                                showInputDialog = false
+                                                selectedStepIds = emptySet()
+                                                if (newProof.steps.last().expression == newProof.problem.conclusion) {
+                                                    showProofCompleteDialog = true
+                                                }
+                                            }
+                                            is ValidationResult.Invalid -> validationError = "Error closing sub-proof: ${result.reason}"
+                                        }
+                                    } else {
+                                        validationError = "No active sub-proof to close."
+                                    }
+                                } catch (e: Exception) {
+                                    validationError = e.message
+                                }
+                            }
+                        )
+                        
+                        validationError?.let {
+                            Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Proof Complete Dialog
+        if (showProofCompleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showProofCompleteDialog = false },
+                title = { Text("Congratulations!") },
+                text = { Text("You have successfully completed the proof.") },
+                confirmButton = {
+                    Button(onClick = { showProofCompleteDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun ProofStepRow(
+    id: Int,
+    expression: String,
+    justification: String,
+    indentationLevel: Int,
+    isSelected: Boolean,
+    onToggleSelection: (Int) -> Unit
+) {
+    val backgroundColor = if (isSelected) MaterialTheme.colors.primary.copy(alpha = 0.1f) else Color.Transparent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .clickable { onToggleSelection(id) }
+            .padding(start = (indentationLevel * 24).dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text("$id.", modifier = Modifier.width(40.dp), fontFamily = FontFamily.Monospace)
+            Text(expression, fontFamily = FontFamily.Monospace)
+        }
+        Text(justification, fontFamily = FontFamily.Monospace, color = Color.Gray)
     }
 }
