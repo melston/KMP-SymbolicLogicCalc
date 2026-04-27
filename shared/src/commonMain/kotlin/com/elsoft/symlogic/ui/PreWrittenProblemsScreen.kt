@@ -8,13 +8,12 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.elsoft.symlogic.problems.getProblemSetRepository
 import com.elsoft.symlogic.problems.ProblemDefinition
 import com.elsoft.symlogic.problems.ProblemSet
+import com.elsoft.symlogic.problems.getProblemSetRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -23,9 +22,14 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
     val problemSetRepository = remember { getProblemSetRepository() }
     val coroutineScope = rememberCoroutineScope()
 
-    var loadedProblemSets by remember { mutableStateOf(listOf<ProblemSet>()) }
-    var filenameInput by remember { mutableStateOf("copi_problems.json") } // Default filename
+    var availableSetNames by remember { mutableStateOf(emptyList<String>()) }
+    var selectedProblemSet by remember { mutableStateOf<ProblemSet?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // Load the list of available problem sets when the screen is first shown
+    LaunchedEffect(Unit) {
+        availableSetNames = problemSetRepository.listProblemSetNames()
+    }
 
     Scaffold(
         topBar = {
@@ -39,92 +43,55 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Load ProblemSet UI
-            OutlinedTextField(
-                value = filenameInput,
-                onValueChange = { filenameInput = it },
-                label = { Text("Problem Set Filename") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    errorMessage = null
-                    coroutineScope.launch {
-                        val loadedSet = problemSetRepository.loadProblemSet(filenameInput)
-                        if (loadedSet != null) {
-                            loadedProblemSets = (loadedProblemSets + loadedSet).distinctBy { it.name }
-                        } else {
-                            errorMessage = "Failed to load problem set from '$filenameInput'."
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Load Problem Set")
-            }
-
-            errorMessage?.let {
-                Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(top = 8.dp))
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Divider()
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "Available Problem Sets:",
-                style = MaterialTheme.typography.subtitle1, // Changed from h6 to subtitle1 for consistency with other headers
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // List of loaded ProblemSets and their problems
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (loadedProblemSets.isEmpty()) {
-                    item {
-                        Text("No problem sets loaded yet. Try loading one!", modifier = Modifier.padding(8.dp))
-                    }
-                } else {
-                    items(loadedProblemSets) { problemSet ->
-                        var expanded by remember { mutableStateOf(false) }
-                        Column(
+        Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            // Left Pane: List of available problem sets
+            Column(modifier = Modifier.weight(0.4f).padding(16.dp)) {
+                Text("Available Sets", style = MaterialTheme.typography.h6)
+                LazyColumn(modifier = Modifier.fillMaxHeight()) {
+                    items(availableSetNames) { name ->
+                        Text(
+                            text = name,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable { expanded = !expanded }
-                        ) {
-                            Text(
-                                text = problemSet.name,
-                                style = MaterialTheme.typography.subtitle1,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (expanded) {
-                                problemSet.problems.forEach { problem ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onSolve(problem) }
-                                            .padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(text = problem.id)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(text = "Prove: ${problem.conclusion}", style = MaterialTheme.typography.caption)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        selectedProblemSet = problemSetRepository.loadProblemSet(name)
                                     }
                                 }
-                            }
-                        }
-                        Divider()
+                                .padding(8.dp)
+                        )
                     }
                 }
             }
+
+            // Right Pane: Details of the selected problem set
+            Column(modifier = Modifier.weight(0.6f).padding(16.dp)) {
+                selectedProblemSet?.let { set ->
+                    Text(set.name, style = MaterialTheme.typography.h6)
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn {
+                        items(set.problems) { problem ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSolve(problem) }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text(problem.id, fontWeight = FontWeight.Bold)
+                                Text("Prove: ${problem.conclusion}", style = MaterialTheme.typography.body2)
+                            }
+                            Divider()
+                        }
+                    }
+                } ?: run {
+                    Text("Select a problem set from the left to see its problems.")
+                }
+            }
+        }
+        
+        errorMessage?.let {
+            // A more robust error display might use a Snackbar
+            Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(16.dp))
         }
     }
 }

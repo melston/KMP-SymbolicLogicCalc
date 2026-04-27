@@ -34,6 +34,9 @@ fun App() {
                 onBack = navigationStateHolder::goBack,
                 onSolve = { problem -> navigationStateHolder.navigateTo(Screen.Solver(problem)) }
             )
+            Screen.ImportProblemSet -> ImportProblemSetScreen(
+                onBack = navigationStateHolder::goBack
+            )
             is Screen.Solver -> SolverScreen(
                 problem = currentScreen.problem,
                 onBack = navigationStateHolder::goBack
@@ -67,6 +70,13 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
             modifier = Modifier.padding(8.dp)
         ) {
             Text("Solve Pre-written Problems")
+        }
+
+        Button(
+            onClick = { onNavigate(Screen.ImportProblemSet) },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text("Import Problem Set")
         }
     }
 }

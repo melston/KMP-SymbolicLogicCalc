@@ -10,5 +10,6 @@ sealed class Screen {
     data object MainMenu : Screen()
     data object GeneratedProblems : Screen()
     data object PreWrittenProblems : Screen()
+    data object ImportProblemSet : Screen()
     data class Solver(val problem: ProblemDefinition) : Screen()
 }

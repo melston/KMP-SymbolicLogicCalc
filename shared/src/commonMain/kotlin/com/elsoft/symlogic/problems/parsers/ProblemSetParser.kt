@@ -19,7 +19,7 @@ class ProblemSetParser {
      * Prove:
      *     <WFF>
      *
-     * Problems can be separated by blank lines or a line starting with three or more dashes (e.g., "---").
+     * Problems can be separated by blank lines and/or a line starting with three or more dashes (e.g., "---").
      */
     fun parse(name: String, input: String): ProblemSet {
         val lines = input.lines()
