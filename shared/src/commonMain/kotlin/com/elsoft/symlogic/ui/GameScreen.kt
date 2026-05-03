@@ -15,8 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import com.elsoft.symlogic.logic.Expression
 import com.elsoft.symlogic.problems.Proof
 import com.elsoft.symlogic.problems.ProofValidator
 import com.elsoft.symlogic.problems.ValidationResult
@@ -42,7 +40,6 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
                            proof.steps.count { it is Proof.ProofStep.ImplicationIntroductionStep }
     val isSubProofActive = indentationLevel > 0
 
-    // Pre-calculate all indentation levels. This will only re-run when the proof.steps list changes.
     val stepIndentationLevels = remember(proof.steps) {
         val levels = mutableListOf<Int>()
         var currentIndent = 0
@@ -83,7 +80,6 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
-            // Proof Display
             Text("Premises:", style = MaterialTheme.typography.h6)
             proof.problem.premises.forEachIndexed { index, premise ->
                 val id = index + 1
@@ -126,22 +122,16 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
             }
         }
 
-        // Input Dialog and other logic remains the same...
         if (showInputDialog) {
-            val selectedExpressions = remember(selectedStepIds, proof) {
-                val allSteps = (proof.problem.premises.mapIndexed { index, expr -> (index + 1) to expr } +
-                                proof.steps.map { it.id to it.expression }).toMap()
-                selectedStepIds.mapNotNull { id -> allSteps[id]?.let { id to it } }.toMap()
-            }
-
-            Dialog(onDismissRequest = { showInputDialog = false }) {
-                Surface(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = MaterialTheme.shapes.medium) {
+            MovableInputDialog(onDismissRequest = { showInputDialog = false }) {
+                Surface(modifier = Modifier.fillMaxSize(), shape = MaterialTheme.shapes.medium) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Add New Step", style = MaterialTheme.typography.h6)
                         Spacer(Modifier.height(16.dp))
                         
                         ProofInput(
-                            selectedParentExpressions = selectedExpressions,
+                            proof = proof,
+                            initialSelectedIds = selectedStepIds,
                             isSubProofActive = isSubProofActive,
                             onAddStep = { expressionStr, rule, parentIdsStr ->
                                 validationError = null

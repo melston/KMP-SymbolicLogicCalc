@@ -5,37 +5,45 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.elsoft.symlogic.logic.AllRulesOfInference
-import com.elsoft.symlogic.logic.AllRulesOfReplacement
-import com.elsoft.symlogic.logic.Expression
-import com.elsoft.symlogic.logic.Rule
-import com.elsoft.symlogic.logic.Addition
+import com.elsoft.symlogic.logic.*
+import com.elsoft.symlogic.problems.Proof
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
 
 @Composable
 fun ProofInput(
-    selectedParentExpressions: Map<Int, Expression>,
+    proof: Proof,
+    initialSelectedIds: Set<Int>,
     isSubProofActive: Boolean,
     onAddStep: (expression: String, rule: Rule, parentIds: String) -> Unit,
     onAddAssumption: (expression: String) -> Unit,
     onCloseSubProof: () -> Unit
 ) {
     var expressionText by remember { mutableStateOf("") }
-    var parentIdsText by remember { mutableStateOf(selectedParentExpressions.keys.joinToString()) }
+    var parentIdsText by remember { mutableStateOf(initialSelectedIds.joinToString(", ")) }
     
     val allRules = remember { AllRulesOfInference + AllRulesOfReplacement }
     val expressionParser = remember { ExpressionParser() }
 
-    val validRules = remember(selectedParentExpressions) {
-        if (selectedParentExpressions.isEmpty()) {
+    // This is the key change: Derive the parent expressions reactively based on the text input.
+    val parentExpressions = remember(parentIdsText, proof) {
+        val allAvailableSteps = (proof.problem.premises.mapIndexed { index, expr -> (index + 1) to expr } +
+                                 proof.steps.map { it.id to it.expression }).toMap()
+        
+        parentIdsText.split(",")
+            .mapNotNull { it.trim().toIntOrNull() }
+            .mapNotNull { id -> allAvailableSteps[id]?.let { id to it } }
+            .toMap()
+    }
+
+    val validRules = remember(parentExpressions) {
+        if (parentExpressions.isEmpty()) {
             allRules
         } else {
             allRules.filter { rule ->
-                // For Addition, it's always potentially valid if one parent is selected.
                 if (rule == Addition) {
-                    selectedParentExpressions.size == 1
+                    parentExpressions.size == 1
                 } else {
-                    rule.apply(selectedParentExpressions.values.toList()).isNotEmpty()
+                    rule.apply(parentExpressions.values.toList()).isNotEmpty()
                 }
             }
         }
@@ -44,9 +52,9 @@ fun ProofInput(
     var selectedRule by remember(validRules) { mutableStateOf(validRules.firstOrNull()) }
     var ruleMenuExpanded by remember { mutableStateOf(false) }
 
-    val possibleOutcomes = remember(selectedRule, selectedParentExpressions) {
+    val possibleOutcomes = remember(selectedRule, parentExpressions) {
         if (selectedRule != Addition) {
-            selectedRule?.apply(selectedParentExpressions.values.toList())?.map { it.result }?.toSet()
+            selectedRule?.apply(parentExpressions.values.toList())?.map { it.result }?.toSet()
         } else {
             null // We don't pre-calculate for Addition
         }
@@ -61,17 +69,11 @@ fun ProofInput(
                            parsedExpression != null &&
                            (
                                if (selectedRule == Addition) {
-                                   // For Addition, validate directly since outcomes are infinite
-                                   selectedRule!!.validate(parsedExpression, selectedParentExpressions.values.toList())
+                                   selectedRule!!.validate(parsedExpression, parentExpressions.values.toList())
                                } else {
-                                   // For other rules, check against the pre-calculated set
                                    possibleOutcomes?.contains(parsedExpression) ?: false
                                }
                            )
-
-    LaunchedEffect(selectedParentExpressions) {
-        parentIdsText = selectedParentExpressions.keys.sorted().joinToString(", ")
-    }
 
     Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
         OutlinedTextField(
