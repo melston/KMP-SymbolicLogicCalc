@@ -39,7 +39,8 @@ fun App() {
                 onBack = navigationStateHolder::goBack
             )
             is Screen.Solver -> GameScreen(
-                initialProof = Proof(currentScreen.problem)
+                initialProof = Proof(currentScreen.problem),
+                onBack = navigationStateHolder::goBack
             )
         }
     }
@@ -77,21 +78,6 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
             modifier = Modifier.padding(8.dp)
         ) {
             Text("Import Problem Set")
-        }
-    }
-}
-
-@Composable
-fun SolverScreen(problem: ProblemDefinition, onBack: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Solver Screen for: ${problem.id}")
-        Text("Prove: ${problem.conclusion}")
-        Button(onClick = onBack) {
-            Text("Back")
         }
     }
 }

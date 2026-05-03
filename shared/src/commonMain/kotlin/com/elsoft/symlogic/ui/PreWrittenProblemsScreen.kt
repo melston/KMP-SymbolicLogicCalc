@@ -7,12 +7,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.ProblemDefinition
 import com.elsoft.symlogic.problems.ProblemSet
+import com.elsoft.symlogic.problems.Proof
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import kotlinx.coroutines.launch
 
@@ -24,11 +28,17 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
 
     var availableSetNames by remember { mutableStateOf(emptyList<String>()) }
     var selectedProblemSet by remember { mutableStateOf<ProblemSet?>(null) }
+    var solvedProblemIds by remember { mutableStateOf(emptySet<String>()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Load the list of available problem sets when the screen is first shown
     LaunchedEffect(Unit) {
         availableSetNames = problemSetRepository.listProblemSetNames()
+    }
+
+    LaunchedEffect(selectedProblemSet) {
+        selectedProblemSet?.let {
+            solvedProblemIds = problemSetRepository.listSolvedProblemIds(it.name)
+        }
     }
 
     Scaffold(
@@ -44,7 +54,6 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
         }
     ) { paddingValues ->
         Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            // Left Pane: List of available problem sets
             Column(modifier = Modifier.weight(0.4f).padding(16.dp)) {
                 Text("Available Sets", style = MaterialTheme.typography.h6)
                 LazyColumn(modifier = Modifier.fillMaxHeight()) {
@@ -64,33 +73,41 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
                 }
             }
 
-            // Right Pane: Details of the selected problem set
             Column(modifier = Modifier.weight(0.6f).padding(16.dp)) {
                 selectedProblemSet?.let { set ->
                     Text(set.name, style = MaterialTheme.typography.h6)
                     Spacer(Modifier.height(8.dp))
                     LazyColumn {
                         items(set.problems) { problem ->
-                            Column(
+                            val isSolved = solvedProblemIds.contains(problem.id)
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { onSolve(problem) }
-                                    .padding(vertical = 8.dp)
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(problem.id, fontWeight = FontWeight.Bold)
-                                Text("Prove: ${problem.conclusion}", style = MaterialTheme.typography.body2)
+                                if (isSolved) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Solved",
+                                        tint = Color.Green,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(problem.id, fontWeight = FontWeight.Bold)
+                                    Text("Prove: ${problem.conclusion}", style = MaterialTheme.typography.body2)
+                                }
                             }
                             Divider()
                         }
                     }
-                } ?: run {
-                    Text("Select a problem set from the left to see its problems.")
-                }
+                } ?: Text("Select a problem set from the left to see its problems.")
             }
         }
         
         errorMessage?.let {
-            // A more robust error display might use a Snackbar
             Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(16.dp))
         }
     }

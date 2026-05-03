@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,13 +20,19 @@ import com.elsoft.symlogic.logic.Expression
 import com.elsoft.symlogic.problems.Proof
 import com.elsoft.symlogic.problems.ProofValidator
 import com.elsoft.symlogic.problems.ValidationResult
+import com.elsoft.symlogic.problems.getProblemSetRepository
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
+import kotlinx.coroutines.launch
 
 @Composable
-fun GameScreen(initialProof: Proof) {
+fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
     var proof by remember { mutableStateOf(initialProof) }
     val validator = remember { ProofValidator() }
     val expressionParser = remember { ExpressionParser() }
+    val repository = remember { getProblemSetRepository() }
+    val coroutineScope = rememberCoroutineScope()
+    val scaffoldState = rememberScaffoldState()
+
     var validationError by remember { mutableStateOf<String?>(null) }
     var showInputDialog by remember { mutableStateOf(false) }
     var showProofCompleteDialog by remember { mutableStateOf(false) }
@@ -39,18 +47,35 @@ fun GameScreen(initialProof: Proof) {
         val levels = mutableListOf<Int>()
         var currentIndent = 0
         for (step in proof.steps) {
-            if (step is Proof.ProofStep.ImplicationIntroductionStep) {
-                currentIndent--
-            }
+            if (step is Proof.ProofStep.ImplicationIntroductionStep) currentIndent--
             levels.add(currentIndent.coerceAtLeast(0))
-            if (step is Proof.ProofStep.Assumption) {
-                currentIndent++
-            }
+            if (step is Proof.ProofStep.Assumption) currentIndent++
         }
         levels
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
+        topBar = {
+            TopAppBar(
+                title = { Text(proof.problem.id) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        coroutineScope.launch {
+                            repository.saveProof(proof)
+                            scaffoldState.snackbarHostState.showSnackbar("Proof Saved!")
+                        }
+                    }) {
+                        Icon(Icons.Default.Save, contentDescription = "Save Proof")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showInputDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Proof Step")
