@@ -34,6 +34,22 @@ fun GameScreen(initialProof: Proof) {
                            proof.steps.count { it is Proof.ProofStep.ImplicationIntroductionStep }
     val isSubProofActive = indentationLevel > 0
 
+    // Pre-calculate all indentation levels. This will only re-run when the proof.steps list changes.
+    val stepIndentationLevels = remember(proof.steps) {
+        val levels = mutableListOf<Int>()
+        var currentIndent = 0
+        for (step in proof.steps) {
+            if (step is Proof.ProofStep.ImplicationIntroductionStep) {
+                currentIndent--
+            }
+            levels.add(currentIndent.coerceAtLeast(0))
+            if (step is Proof.ProofStep.Assumption) {
+                currentIndent++
+            }
+        }
+        levels
+    }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { showInputDialog = true }) {
@@ -63,11 +79,9 @@ fun GameScreen(initialProof: Proof) {
             Text("Prove: ${proof.problem.conclusion}", style = MaterialTheme.typography.h6)
             Spacer(Modifier.height(16.dp))
 
-            var currentIndent by remember { mutableStateOf(0) }
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 items(proof.steps.size) { index ->
                     val step = proof.steps[index]
-                    if (step is Proof.ProofStep.ImplicationIntroductionStep) currentIndent--
                     val justification = when (step) {
                         is Proof.ProofStep.RegularStep -> "${step.rule.name} ${step.parentStepIds.joinToString()}"
                         is Proof.ProofStep.Assumption -> "Assumption"
@@ -77,18 +91,17 @@ fun GameScreen(initialProof: Proof) {
                         id = step.id,
                         expression = step.expression.toString(),
                         justification = justification,
-                        indentationLevel = currentIndent,
+                        indentationLevel = stepIndentationLevels[index],
                         isSelected = selectedStepIds.contains(step.id),
                         onToggleSelection = { id ->
                             selectedStepIds = if (selectedStepIds.contains(id)) selectedStepIds - id else selectedStepIds + id
                         }
                     )
-                    if (step is Proof.ProofStep.Assumption) currentIndent++
                 }
             }
         }
 
-        // Input Dialog
+        // Input Dialog and other logic remains the same...
         if (showInputDialog) {
             val selectedExpressions = remember(selectedStepIds, proof) {
                 val allSteps = (proof.problem.premises.mapIndexed { index, expr -> (index + 1) to expr } +
@@ -113,13 +126,16 @@ fun GameScreen(initialProof: Proof) {
                                     val newProof = proof.addStep(expression, rule, parentIds)
                                     
                                     when (val result = validator.validate(newProof)) {
-                                        is ValidationResult.Valid -> {
+                                        is ValidationResult.Complete -> {
                                             proof = newProof
                                             showInputDialog = false
                                             selectedStepIds = emptySet()
-                                            if (newProof.steps.last().expression == newProof.problem.conclusion) {
-                                                showProofCompleteDialog = true
-                                            }
+                                            showProofCompleteDialog = true
+                                        }
+                                        is ValidationResult.ValidSoFar -> {
+                                            proof = newProof
+                                            showInputDialog = false
+                                            selectedStepIds = emptySet()
                                         }
                                         is ValidationResult.Invalid -> validationError = "Error in step ${result.stepId}: ${result.reason}"
                                     }
@@ -134,12 +150,13 @@ fun GameScreen(initialProof: Proof) {
                                     val newProof = proof.addAssumption(expression)
                                     
                                     when (val result = validator.validate(newProof)) {
-                                        is ValidationResult.Valid -> {
+                                        is ValidationResult.ValidSoFar -> {
                                             proof = newProof
                                             showInputDialog = false
                                             selectedStepIds = emptySet()
                                         }
                                         is ValidationResult.Invalid -> validationError = "Error in step ${result.stepId}: ${result.reason}"
+                                        is ValidationResult.Complete -> {} 
                                     }
                                 } catch (e: Exception) {
                                     validationError = e.message
@@ -161,13 +178,16 @@ fun GameScreen(initialProof: Proof) {
                                         )
                                         
                                         when (val result = validator.validate(newProof)) {
-                                            is ValidationResult.Valid -> {
+                                            is ValidationResult.Complete -> {
                                                 proof = newProof
                                                 showInputDialog = false
                                                 selectedStepIds = emptySet()
-                                                if (newProof.steps.last().expression == newProof.problem.conclusion) {
-                                                    showProofCompleteDialog = true
-                                                }
+                                                showProofCompleteDialog = true
+                                            }
+                                            is ValidationResult.ValidSoFar -> {
+                                                proof = newProof
+                                                showInputDialog = false
+                                                selectedStepIds = emptySet()
                                             }
                                             is ValidationResult.Invalid -> validationError = "Error closing sub-proof: ${result.reason}"
                                         }
@@ -188,7 +208,6 @@ fun GameScreen(initialProof: Proof) {
             }
         }
 
-        // Proof Complete Dialog
         if (showProofCompleteDialog) {
             AlertDialog(
                 onDismissRequest = { showProofCompleteDialog = false },

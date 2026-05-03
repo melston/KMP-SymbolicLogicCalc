@@ -1,0 +1,7 @@
+P1
+Premises:
+  r -> t
+  q | (t -> ~q)
+  ~q
+Prove:
+  q | (r -> ~q)

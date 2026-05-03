@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.ProblemDefinition
+import com.elsoft.symlogic.problems.Proof
 
 @Composable
 fun App() {
@@ -37,9 +38,8 @@ fun App() {
             Screen.ImportProblemSet -> ImportProblemSetScreen(
                 onBack = navigationStateHolder::goBack
             )
-            is Screen.Solver -> SolverScreen(
-                problem = currentScreen.problem,
-                onBack = navigationStateHolder::goBack
+            is Screen.Solver -> GameScreen(
+                initialProof = Proof(currentScreen.problem)
             )
         }
     }

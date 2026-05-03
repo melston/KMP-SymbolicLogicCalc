@@ -9,6 +9,7 @@ import com.elsoft.symlogic.logic.AllRulesOfInference
 import com.elsoft.symlogic.logic.AllRulesOfReplacement
 import com.elsoft.symlogic.logic.Expression
 import com.elsoft.symlogic.logic.Rule
+import com.elsoft.symlogic.logic.Addition
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
 
 @Composable
@@ -25,13 +26,17 @@ fun ProofInput(
     val allRules = remember { AllRulesOfInference + AllRulesOfReplacement }
     val expressionParser = remember { ExpressionParser() }
 
-    // Pre-validate the rules based on the selected parents
     val validRules = remember(selectedParentExpressions) {
         if (selectedParentExpressions.isEmpty()) {
             allRules
         } else {
             allRules.filter { rule ->
-                rule.apply(selectedParentExpressions.values.toList()).isNotEmpty()
+                // For Addition, it's always potentially valid if one parent is selected.
+                if (rule == Addition) {
+                    selectedParentExpressions.size == 1
+                } else {
+                    rule.apply(selectedParentExpressions.values.toList()).isNotEmpty()
+                }
             }
         }
     }
@@ -39,24 +44,30 @@ fun ProofInput(
     var selectedRule by remember(validRules) { mutableStateOf(validRules.firstOrNull()) }
     var ruleMenuExpanded by remember { mutableStateOf(false) }
 
-    // Pre-calculate all possible valid outcomes for the selected rule and parents
     val possibleOutcomes = remember(selectedRule, selectedParentExpressions) {
-        selectedRule?.apply(selectedParentExpressions.values.toList())?.map { it.result }?.toSet()
+        if (selectedRule != Addition) {
+            selectedRule?.apply(selectedParentExpressions.values.toList())?.map { it.result }?.toSet()
+        } else {
+            null // We don't pre-calculate for Addition
+        }
     }
 
-    // Parse the user's input only when it changes
     val parsedExpression = remember(expressionText) {
-        try {
-            expressionParser.parse(expressionText)
-        } catch (e: Exception) {
-            null
-        }
+        try { expressionParser.parse(expressionText) } catch (e: Exception) { null }
     }
 
     val isAddStepEnabled = expressionText.isNotEmpty() &&
                            selectedRule != null &&
                            parsedExpression != null &&
-                           (possibleOutcomes?.contains(parsedExpression) ?: false)
+                           (
+                               if (selectedRule == Addition) {
+                                   // For Addition, validate directly since outcomes are infinite
+                                   selectedRule!!.validate(parsedExpression, selectedParentExpressions.values.toList())
+                               } else {
+                                   // For other rules, check against the pre-calculated set
+                                   possibleOutcomes?.contains(parsedExpression) ?: false
+                               }
+                           )
 
     LaunchedEffect(selectedParentExpressions) {
         parentIdsText = selectedParentExpressions.keys.sorted().joinToString(", ")
@@ -72,7 +83,6 @@ fun ProofInput(
         Spacer(Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
-            // Rule Selector
             Box(modifier = Modifier.weight(1f)) {
                 OutlinedTextField(
                     value = selectedRule?.name ?: "No valid rules",
@@ -99,7 +109,6 @@ fun ProofInput(
 
             Spacer(Modifier.width(8.dp))
 
-            // Parent IDs
             OutlinedTextField(
                 value = parentIdsText,
                 onValueChange = { parentIdsText = it },
