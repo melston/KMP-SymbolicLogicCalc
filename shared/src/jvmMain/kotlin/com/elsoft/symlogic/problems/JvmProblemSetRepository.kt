@@ -16,7 +16,7 @@ class JvmProblemSetRepository : ProblemSetRepository {
     init {
         val userHome = System.getProperty("user.home")
         baseDir = File(userHome, ".symlogic")
-        setsDir = File(baseDir, "problem_sets")
+        setsDir = File(baseDir, "problems")
         proofsDir = File(baseDir, "proofs")
         if (!setsDir.exists()) setsDir.mkdirs()
         if (!proofsDir.exists()) proofsDir.mkdirs()
@@ -65,7 +65,13 @@ class JvmProblemSetRepository : ProblemSetRepository {
 
     override suspend fun listProblemSetNames(): List<String> {
         return setsDir.listFiles { _, name -> name.endsWith(".json") }
-            ?.mapNotNull { loadProblemSet(it.name.removeSuffix(".json"))?.name }
+            ?.mapNotNull {
+                try {
+                    json.decodeFromString<ProblemSet>(it.readText()).name
+                } catch (e: Exception) {
+                    null // Ignore malformed files
+                }
+            }
             ?: emptyList()
     }
 
