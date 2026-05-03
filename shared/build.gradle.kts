@@ -6,15 +6,21 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+// Add this java block to configure the toolchain for the entire module
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21)) // Use a modern, but stable LTS version like 21
+    }
+}
+
 kotlin {
     androidTarget()
-    jvm()
+    jvm() // The JVM target will now respect the toolchain defined above
     
     sourceSets {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
-                // Common Compose dependencies
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material)
@@ -31,16 +37,14 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
-                // Android-specific Compose dependencies
                 implementation(compose.preview)
-                implementation(libs.androidx.activityCompose) // This is the big one
+                implementation(libs.androidx.activityCompose)
             }
         }
         val androidUnitTest by getting
 
         val jvmMain by getting {
             dependencies {
-                // JVM-specific Compose dependencies
                 implementation(compose.desktop.currentOs)
             }
         }
@@ -63,9 +67,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
     buildFeatures {
-        compose = true // Enable Compose for Android
+        compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.12" // Specify Compose compiler version
+        kotlinCompilerExtensionVersion = "1.5.12"
     }
 }
