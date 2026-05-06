@@ -23,14 +23,14 @@ class ProblemSetRepositoryTest {
         )
         val problemSet = ProblemSet(name = "My Test Set", problems = listOf(problem))
         
-        val filename = "test_problem_set.json"
+//        val filename = "test_problem_set.json"
         val repository = getProblemSetRepository()
 
         // 2. Save the ProblemSet
-        repository.saveProblemSet(problemSet, filename)
+        repository.saveProblemSet(problemSet)
 
         // 3. Load the ProblemSet back
-        val loadedProblemSet = repository.loadProblemSet(filename)
+        val loadedProblemSet = repository.loadProblemSet(problemSet.name)
 
         // 4. Assert that the loaded data is correct
         assertNotNull(loadedProblemSet)
@@ -40,6 +40,8 @@ class ProblemSetRepositoryTest {
         assertEquals(problem.conclusion, loadedProblemSet.problems.first().conclusion)
         
         // Clean up the test file
-        File(filename).delete()
+//        File(filename).delete()
+        val res = repository.deleteProblemSet(problemSet.name)
+        assertEquals(res, true)
     }
 }

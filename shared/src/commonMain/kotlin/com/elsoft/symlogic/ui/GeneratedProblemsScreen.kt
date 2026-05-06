@@ -13,15 +13,20 @@ import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.logic.*
 import com.elsoft.symlogic.problems.ProofEngine
 import com.elsoft.symlogic.problems.ProblemDefinition
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun GeneratedProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) -> Unit) {
     val proofEngine = remember { ProofEngine(Random.Default) }
+    val coroutineScope = rememberCoroutineScope()
+    
     val allRules = remember { AllRulesOfInference + AllRulesOfReplacement }
     var selectedRules by remember { mutableStateOf(emptySet<Rule>()) }
-    var targetSteps by remember { mutableStateOf(3) } // Default complexity
+    var targetSteps by remember { mutableStateOf(3) }
+    var isGenerating by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -48,24 +53,16 @@ fun GeneratedProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) -> 
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            LazyColumn(
-                modifier = Modifier.weight(1f)
-            ) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
                 items(allRules) { rule ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
                             checked = selectedRules.contains(rule),
                             onCheckedChange = { isChecked ->
-                                selectedRules = if (isChecked) {
-                                    selectedRules + rule
-                                } else {
-                                    selectedRules - rule
-                                }
+                                selectedRules = if (isChecked) selectedRules + rule else selectedRules - rule
                             }
                         )
                         Text(rule.name)
@@ -77,27 +74,45 @@ fun GeneratedProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) -> 
 
             OutlinedTextField(
                 value = targetSteps.toString(),
-                onValueChange = {
-                    targetSteps = it.toIntOrNull() ?: 0
-                },
+                onValueChange = { targetSteps = it.toIntOrNull() ?: 0 },
                 label = { Text("Target Solution Steps") },
-                // Removed keyboardOptions as KeyboardType is Android-specific
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
+
+            errorMessage?.let {
+                Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            Spacer(Modifier.height(8.dp))
 
             Button(
                 onClick = {
-                    val problem = proofEngine.generateProblem(
-                        targetSteps = targetSteps.coerceAtLeast(1), // Ensure at least 1 step
-                        requiredRules = selectedRules.toList()
-                    )
-                    onSolve(problem)
+                    isGenerating = true
+                    errorMessage = null
+                    coroutineScope.launch {
+                        try {
+                            val problem = proofEngine.generateProblem(
+                                targetSteps = targetSteps.coerceAtLeast(1),
+                                requiredRules = selectedRules.toList()
+                            )
+                            onSolve(problem)
+                        } catch (e: Exception) {
+                            errorMessage = e.message
+                        } finally {
+                            isGenerating = false
+                        }
+                    }
                 },
+                enabled = !isGenerating,
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Generate Problem")
+                if (isGenerating) {
+                    CircularProgressIndicator(color = MaterialTheme.colors.onPrimary)
+                } else {
+                    Text("Generate Problem")
+                }
             }
         }
     }

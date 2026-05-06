@@ -36,7 +36,7 @@ class ProofValidatorTest {
 
         val validator = ProofValidator()
         val result = validator.validate(proof)
-        assertEquals(ValidationResult.Valid, result)
+        assertEquals(ValidationResult.Complete, result)
     }
 
     @Test
@@ -78,7 +78,7 @@ class ProofValidatorTest {
 
         val validator = ProofValidator()
         val result = validator.validate(proof)
-        assertEquals(ValidationResult.Valid, result)
+        assertEquals(ValidationResult.Complete, result)
     }
 
     @Test
@@ -130,7 +130,7 @@ class ProofValidatorTest {
 
         val validator = ProofValidator()
         val result = validator.validate(proof)
-        assertEquals(ValidationResult.Valid, result)
+        assertEquals(ValidationResult.Complete, result)
     }
 
     @Test
