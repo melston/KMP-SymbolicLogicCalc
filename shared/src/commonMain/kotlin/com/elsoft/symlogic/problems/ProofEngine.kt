@@ -19,12 +19,15 @@ import kotlin.random.Random
  */
 class ProofEngine(private val random: Random = Random.Default) {
     private val premiseGenerator = PremiseGenerator(random)
+    private val maxLoopCnt = 50000
 
     // Generator function using DetailedRule for precise backward pruning
     fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): ProblemDefinition {
         val rules = AllRulesOfInference + AllRulesOfReplacement
 
-        while (true) {
+        var loopCnt = 0
+        while (loopCnt < maxLoopCnt) {
+            loopCnt++
             // Start with an empty set of starting premises, we will build them uniquely
             val poolSet = mutableSetOf<Expression>()
 
@@ -101,7 +104,6 @@ class ProofEngine(private val random: Random = Random.Default) {
             }
 
             val conclusion = derivations.lastOrNull()?.result ?: pool.last()
-
             // Backward Pruning: Find all essential parents
             val usedPremises = mutableSetOf<Expression>()
             val queue = mutableListOf(conclusion)
@@ -154,6 +156,7 @@ class ProofEngine(private val random: Random = Random.Default) {
 
             // If the generated problem was trivial, conflicted, or missing rules, we loop and try again!
         }
+        throw Exception("Bailed after $maxLoopCnt iterations.")
     }
 
     /**

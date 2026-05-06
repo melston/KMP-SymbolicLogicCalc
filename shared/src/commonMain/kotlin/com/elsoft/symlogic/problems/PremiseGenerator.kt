@@ -8,7 +8,7 @@ import kotlin.random.Random
  * used by the [ProofEngine] to create symbolic logic problems.
  */
 class PremiseGenerator(private val random: Random = Random.Default) {
-
+    
     private val variables = listOf("p", "q", "r", "s", "t").map { Expression.Variable(it) }
 
     /**
@@ -17,7 +17,7 @@ class PremiseGenerator(private val random: Random = Random.Default) {
      */
     fun generateInitialPool(poolSize: Int = 4, maxDepth: Int = 2): List<Expression> {
         val pool = mutableSetOf<Expression>()
-
+        
         // Ensure we at least have a couple of simple variables so rules can fire
         // Since we are adding to a set, if it randomly picks the same variable twice,
         // the while loop below will naturally fill in the missing slots until we reach `poolSize`.
@@ -40,31 +40,52 @@ class PremiseGenerator(private val random: Random = Random.Default) {
      */
     private fun generateRandomExpression(depth: Int, maxDepth: Int): Expression {
         if (depth >= maxDepth) {
-            // Base case: return a variable or a negated variable
             val variable = variables.random(random)
             return if (random.nextBoolean()) Expression.Not(variable) else variable
         }
 
-        // Randomly choose the type of expression to generate
         return when (random.nextInt(6)) {
             0 -> Expression.Not(generateRandomExpression(depth + 1, maxDepth))
-            1 -> Expression.And(
-                generateRandomExpression(depth + 1, maxDepth),
-                generateRandomExpression(depth + 1, maxDepth)
-            )
-            2 -> Expression.Or(
-                generateRandomExpression(depth + 1, maxDepth),
-                generateRandomExpression(depth + 1, maxDepth)
-            )
-            3 -> Expression.Implies(
-                generateRandomExpression(depth + 1, maxDepth),
-                generateRandomExpression(depth + 1, maxDepth)
-            )
-            4 -> Expression.Iff(
-                generateRandomExpression(depth + 1, maxDepth),
-                generateRandomExpression(depth + 1, maxDepth)
-            )
-            else -> variables.random(random) // Occasional simple variable
+            1 -> {
+                var left: Expression
+                var right: Expression
+                do {
+                    left = generateRandomExpression(depth + 1, maxDepth)
+                    right = generateRandomExpression(depth + 1, maxDepth)
+                } while (left == right || left == Expression.Not(right))
+                Expression.And(left, right)
+            }
+            2 -> {
+                var left: Expression
+                var right: Expression
+                do {
+                    left = generateRandomExpression(depth + 1, maxDepth)
+                    right = generateRandomExpression(depth + 1, maxDepth)
+                } while (left == right || left == Expression.Not(right))
+                Expression.Or(left, right)
+            }
+            3 -> {
+                var left: Expression
+                var right: Expression
+                do {
+                    left = generateRandomExpression(depth + 1, maxDepth)
+                    right = generateRandomExpression(depth + 1, maxDepth)
+                } while (left == right || left == Expression.Not(right))
+                Expression.Implies(left, right)
+            }
+            4 -> {
+                var left: Expression
+                var right: Expression
+                do {
+                    left = generateRandomExpression(depth + 1, maxDepth)
+                    right = generateRandomExpression(depth + 1, maxDepth)
+                } while (left == right || left == Expression.Not(right))
+                Expression.Iff(left, right)
+            }
+            else -> {
+                val variable = variables.random(random)
+                if (random.nextBoolean()) Expression.Not(variable) else variable
+            }
         }
     }
 }
