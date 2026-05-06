@@ -3,6 +3,14 @@ package com.elsoft.symlogic.logic
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
+/**
+ * Handle the following:
+ * ```text
+ *     P -> Q
+ *     P
+ *     Therefore: Q
+ * ```
+ */
 @Serializable
 @SerialName("ModusPonens")
 object ModusPonens : Rule {
@@ -37,6 +45,14 @@ object ModusPonens : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P -> Q
+ *     ~Q
+ *     Therefore: ~P
+ * ```
+ */
 @Serializable
 @SerialName("ModusTollens")
 object ModusTollens : Rule {
@@ -72,6 +88,14 @@ object ModusTollens : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P -> Q
+ *     Q -> R
+ *     Therefore: P -> R
+ * ```
+ */
 @Serializable
 @SerialName("HypotheticalSyllogism")
 object HypotheticalSyllogism : Rule {
@@ -108,6 +132,14 @@ object HypotheticalSyllogism : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P | Q
+ *     ~P
+ *     Therefore: Q
+ * ```
+ */
 @Serializable
 @SerialName("DisjunctiveSyllogism")
 object DisjunctiveSyllogism : Rule {
@@ -157,6 +189,13 @@ object DisjunctiveSyllogism : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P & R
+ *     Therefore: P
+ * ```
+ */
 @Serializable
 @SerialName("Simplification")
 object Simplification : Rule {
@@ -181,6 +220,14 @@ object Simplification : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P
+ *     Q
+ *     Therefore: P & Q
+ * ```
+ */
 @Serializable
 @SerialName("Conjunction")
 object Conjunction : Rule {
@@ -209,6 +256,13 @@ object Conjunction : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P
+ *     Therefore: P | Q
+ * ```
+ */
 @Serializable
 @SerialName("Addition")
 object Addition : Rule {
@@ -268,6 +322,15 @@ object Addition : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P -> R
+ *     Q -> S
+ *     P | Q
+ *     Therefore: R | S
+ * ```
+ */
 @Serializable
 @SerialName("ConstructiveDilemma")
 object ConstructiveDilemma : Rule {
@@ -310,6 +373,15 @@ object ConstructiveDilemma : Rule {
     }
 }
 
+/**
+ * Handle the following:
+ * ```text
+ *     P -> R
+ *     Q -> S
+ *     ~R | ~S
+ *     Therefore: ~P | ~Q
+ * ```
+ */
 @Serializable
 @SerialName("DestructiveDilemma")
 object DestructiveDilemma : Rule {
@@ -328,7 +400,9 @@ object DestructiveDilemma : Rule {
                             for (e3 in expressions) {
                                 if (e3 is Expression.Implies && e3.right == rightNot.operand) { // Q -> S
                                     results.add(Derivation(
-                                        Expression.Or(Expression.Not(e2.left), Expression.Not(e3.left)),
+                                        Expression.Or( // ~P | ~Q
+                                            Expression.Not(e2.left),
+                                            Expression.Not(e3.left)),
                                         this, 
                                         listOf(e1, e2, e3)
                                     ))
