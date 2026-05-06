@@ -101,6 +101,11 @@ abstract class BaseReplacementRule : ReplacementRule {
     }
 }
 
+/**
+ * Handle the following:
+ * - `~(P & Q) == (~P | ~Q)`
+ * - `~(P | Q) == (~P & ~Q)`
+ */
 @Serializable
 @SerialName("DeMorgan")
 object DeMorgan : BaseReplacementRule() {
@@ -135,6 +140,11 @@ object DeMorgan : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `(P | Q) == (Q | P)`
+ * - `(P & Q) == (Q & P)`
+ */
 @Serializable
 @SerialName("Commutativity")
 object Commutativity : BaseReplacementRule() {
@@ -152,6 +162,11 @@ object Commutativity : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `(P & (Q & R)) == ((P & Q) & R)`
+ * - `(P | (Q | R)) == ((P | Q) | R)`
+ */
 @Serializable
 @SerialName("Associativity")
 object Associativity : BaseReplacementRule() {
@@ -186,6 +201,11 @@ object Associativity : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `(P & (Q | R)) == ((P & Q) | (P & R))`
+ * - `(P | (Q & R)) == ((P | Q) & (P | R))`
+ */
 @Serializable
 @SerialName("Distribution")
 object Distribution : BaseReplacementRule() {
@@ -220,6 +240,10 @@ object Distribution : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `P == ~~P`
+ */
 @Serializable
 @SerialName("DoubleNegation")
 object DoubleNegation : BaseReplacementRule() {
@@ -241,6 +265,10 @@ object DoubleNegation : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `(P -> Q) == (~Q -> ~P)`
+ */
 @Serializable
 @SerialName("Transposition")
 object Transposition : BaseReplacementRule() {
@@ -257,6 +285,10 @@ object Transposition : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+* - `(P -> Q) == (~P | Q)`
+ */
 @Serializable
 @SerialName("MaterialImplication")
 object MaterialImplication : BaseReplacementRule() {
@@ -279,6 +311,11 @@ object MaterialImplication : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `(P == Q) == ((P -> Q) & (Q -> P))`
+ * - `(P == Q) == ((P & Q) | (~P & ~Q))`
+ */
 @Serializable
 @SerialName("MaterialEquivalence")
 object MaterialEquivalence : BaseReplacementRule() {
@@ -303,6 +340,10 @@ object MaterialEquivalence : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `((P & Q) -> R)) == (P -> (Q -> R))`
+ */
 @Serializable
 @SerialName("Exportation")
 object Exportation : BaseReplacementRule() {
@@ -326,6 +367,11 @@ object Exportation : BaseReplacementRule() {
     }
 }
 
+/**
+ * Handle the following:
+ * - `P == (P | P)`
+ * - `P == (P & P)`
+ */
 @Serializable
 @SerialName("Tautology")
 object Tautology : BaseReplacementRule() {
