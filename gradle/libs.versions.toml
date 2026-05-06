@@ -26,7 +26,6 @@ androidx-activityCompose = { module = "androidx.activity:activity-compose", vers
 jetbrains-androidx-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle"}
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 multiplatformSettings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
-multiplatformSettingsComposeHelper = { module = "com.russhwolf:multiplatform-settings-compose-helper", version.ref = "multiplatformSettings" }
 
 [plugins]
 
