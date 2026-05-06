@@ -6,16 +6,15 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
-// Add this java block to configure the toolchain for the entire module
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21)) // Use a modern, but stable LTS version like 21
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
 kotlin {
     androidTarget()
-    jvm() // The JVM target will now respect the toolchain defined above
+    jvm()
     
     sourceSets {
         val commonMain by getting {
@@ -27,6 +26,9 @@ kotlin {
                 implementation(libs.compose.ui)
                 implementation(libs.compose.resources)
                 implementation(libs.compose.icons)
+                
+                // Core settings dependency is all that's needed
+                implementation(libs.multiplatformSettings)
             }
         }
         val commonTest by getting {
@@ -46,6 +48,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
+                // The -compose-helper dependency does not exist and should be removed
             }
         }
         val jvmTest by getting {
