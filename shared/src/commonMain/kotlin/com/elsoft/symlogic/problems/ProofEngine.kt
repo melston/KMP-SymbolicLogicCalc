@@ -54,6 +54,10 @@ class ProofEngine(private val random: Random = Random.Default) {
             // We use a temporary simple step list to do the reverse traversal
             val essentialDerivations = mutableListOf<Pair<Expression, Derivation>>()
 
+            // Make sure our steps, working backward from the conclusion, can be supported
+            // by either derivations or by premises.  On leaving this loop, queue will be empty,
+            // essentialDerivations will have all required derived steps for the problem, and
+            // usedPremises will contain all necessary premises for the problem.
             while (queue.isNotEmpty()) {
                 val current = queue.removeFirst()
 
@@ -77,18 +81,21 @@ class ProofEngine(private val random: Random = Random.Default) {
             val usedRules = essentialDerivations.map { it.second.rule }.toSet()
             val containsRequiredRules = requiredRules.all { it in usedRules }
 
-            // Ensure the problem isn't completely trivial (e.g. given P prove P, or only 1 step)
-            // also ensures we generated at least `targetSteps/2` essential steps so the problem is meaty.
+            // Ensure the problem isn't completely trivial
+            // (e.g. given P prove P, or only 1 step)
+            // also ensures we generated at least `targetSteps/2` essential steps
+            // so the problem is meaty.
             val premisesList = usedPremises.toList()
             if (containsRequiredRules &&
                 essentialDerivations.size >= maxOf(2, targetSteps / 2) &&
                 !usedPremises.contains(conclusion) &&
                 !hasObviousConflicts(premisesList)
             ) {
-                // To keep the generator interface simple, we just return the core ProblemDefinition.
-                // The backward steps (the solution) could theoretically be packaged as a Proof object,
-                // but since this engine's goal is just to generate solvable problems,
-                // returning the ProblemDefinition is sufficient for the user to then try to solve.
+                // To keep the generator interface simple, we just return the core
+                // ProblemDefinition.  The essentialDerivations (the solution) could
+                // theoretically be packaged as a Proof object, but since this engine's
+                // primary goal is just to generate solvable problems, returning the
+                // ProblemDefinition is sufficient for the user to then try to solve.
                 val uuid = (1..8).map { random.nextInt(0, 16).toString(16) }.joinToString("")
                 return ProblemDefinition(
                     id = "gen_$uuid",
