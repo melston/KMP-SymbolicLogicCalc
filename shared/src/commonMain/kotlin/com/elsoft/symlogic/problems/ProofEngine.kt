@@ -45,19 +45,28 @@ class ProofEngine(private val random: Random = Random.Default) {
 
             val conclusion = derivations.lastOrNull()?.result ?: premiseList.last()
 
-            // Backward Pruning: Find all essential parents
-            val usedPremises = mutableSetOf<Expression>()
-            // Expressions we need to find the parents of
+            // Expressions we need to find the parents of.
+            // This will grow as we find ancestors of our conclusion that also need
+            // to be derived, or added to the initial premises, then shrink until we
+            // no longer have any expressions to find a derivation for.
             val queue = mutableListOf(conclusion)
-            // Expressions we have seen already.  Prevents looking at the same expression twice.
+            // Expressions we have seen already.
+            // This is an intermediate set that prevents looking at the same expression twice.
             val processed = mutableSetOf<Expression>()
-            // We use a temporary simple step list to do the reverse traversal
+            // All the steps from the initial premises to the conclusion.  This is
+            // effectively the solved proof.  It is built by working backward from the
+            // conclusion to the initial premises, looking for expressions that can be
+            // used to derive the conclusion or its ancestors.
             val essentialDerivations = mutableListOf<Pair<Expression, Derivation>>()
+            // Backward Pruning: Find all essential expressions that form the premises
+            // of the generated problem.
+            val usedPremises = mutableSetOf<Expression>()
 
             // Make sure our steps, working backward from the conclusion, can be supported
-            // by either derivations or by premises.  On leaving this loop, queue will be empty,
-            // essentialDerivations will have all required derived steps for the problem, and
-            // usedPremises will contain all necessary premises for the problem.
+            // by either derivations or by premises.  On leaving this loop:
+            // - `queue` will be empty (no more parents to find),
+            // - `essentialDerivations` will have all required derived steps for the problem,
+            // - `usedPremises` will contain all necessary premises for the problem.
             while (queue.isNotEmpty()) {
                 val current = queue.removeFirst()
 
@@ -103,7 +112,6 @@ class ProofEngine(private val random: Random = Random.Default) {
                     conclusion = conclusion
                 )
             }
-
             // If the generated problem was trivial, conflicted, or missing rules,
             // we loop and try again!
         }
@@ -232,6 +240,15 @@ class ProofEngine(private val random: Random = Random.Default) {
             }
             if (premiseSet.contains(Expression.Not(p))) {
                 return true
+            }
+            if (p is Expression.Implies &&
+                (p.right == Expression.Not(p.left) ||
+                 p.left == Expression.Not(p.right))) {
+                // p -> ~p or ~p -> p
+                // This is a valid expression, evaluating to ~p.  However, it is
+                // odd looking.  So, don't allow it most of the time.
+                return if (random.nextDouble() < 0.3) true
+                       else false
             }
         }
         return false
