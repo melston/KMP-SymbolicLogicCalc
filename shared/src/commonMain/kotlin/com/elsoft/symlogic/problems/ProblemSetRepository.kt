@@ -31,15 +31,18 @@ interface ProblemSetRepository {
     // --- Proof Management ---
 
     /**
-     * Saves a user's proof. The proof is associated with its problem definition.
+     * Saves a user's proof, explicitly associating it with a problem set.
+     * @param setName The name of the problem set this proof belongs to.
+     * @param proof The proof object to save.
      */
-    suspend fun saveProof(proof: Proof)
+    suspend fun saveProof(setName: String, proof: Proof)
 
     /**
-     * Loads a saved proof for a given problem.
+     * Loads a saved proof for a given problem within a specific problem set.
+     * @param setName The name of the problem set.
      * @param problem The definition of the problem for which to load the proof.
      */
-    suspend fun loadProof(problem: ProblemDefinition): Proof?
+    suspend fun loadProof(setName: String, problem: ProblemDefinition): Proof?
 
     /**
      * Lists the IDs of all problems that have a saved proof within a given problem set.

@@ -5,7 +5,7 @@ import kotlinx.serialization.SerialName
 
 /**
  * Rules of Replacement apply to sub-expressions as well as whole expressions.
- * They are bi-directional logically, but for a generator, we treat them as
+ * They are bidirectional logically, but for a generator, we treat them as
  * one-way transformations to keep things simple.
  */
 interface ReplacementRule : Rule {
@@ -395,7 +395,44 @@ object Tautology : BaseReplacementRule() {
     }
 }
 
+@Serializable
+@SerialName("Identity")
+object Identity : BaseReplacementRule() {
+    override val name = "Identity"
+
+    private fun isContradiction(e: Expression): Boolean {
+        return (e is Expression.And && e.left == Expression.Not(e.right)) ||
+               (e is Expression.And && e.right == Expression.Not(e.left))
+    }
+
+    private fun isTautology(e: Expression): Boolean {
+        return (e is Expression.Or && e.left == Expression.Not(e.right)) ||
+               (e is Expression.Or && e.right == Expression.Not(e.left))
+    }
+
+    override fun applyToExpression(expression: Expression): List<Derivation> {
+        return expression.replaceAll(this, expression) { e ->
+            when (e) {
+                // p | F  ->  p
+                is Expression.Or -> {
+                    if (isContradiction(e.right)) e.left
+                    else if (isContradiction(e.left)) e.right
+                    else null
+                }
+                // p & T  ->  p
+                is Expression.And -> {
+                    if (isTautology(e.right)) e.left
+                    else if (isTautology(e.left)) e.right
+                    else null
+                }
+                else -> null
+            }
+        }
+    }
+}
+
 val AllRulesOfReplacement = listOf(
     DeMorgan, Commutativity, Associativity, Distribution, DoubleNegation,
-    Transposition, MaterialImplication, MaterialEquivalence, Exportation, Tautology
+    Transposition, MaterialImplication, MaterialEquivalence, Exportation, Tautology,
+    Identity
 )

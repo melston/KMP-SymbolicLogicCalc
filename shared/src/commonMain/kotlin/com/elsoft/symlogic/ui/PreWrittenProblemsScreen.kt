@@ -14,15 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.elsoft.symlogic.problems.ProblemDefinition
-import com.elsoft.symlogic.problems.ProblemSet
 import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProblemSet
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) -> Unit) {
+fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (Proof, String) -> Unit) {
     val problemSetRepository = remember { getProblemSetRepository() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -83,7 +82,12 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (ProblemDefinition) ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onSolve(problem) }
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            val savedProof = problemSetRepository.loadProof(set.name, problem)
+                                            onSolve(savedProof ?: Proof(problem), set.name)
+                                        }
+                                    }
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {

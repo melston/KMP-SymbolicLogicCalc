@@ -23,7 +23,7 @@ import com.elsoft.symlogic.problems.parsers.ExpressionParser
 import kotlinx.coroutines.launch
 
 @Composable
-fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
+fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
     var proof by remember { mutableStateOf(initialProof) }
     val validator = remember { ProofValidator() }
     val expressionParser = remember { ExpressionParser() }
@@ -36,9 +36,8 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
     var showProofCompleteDialog by remember { mutableStateOf(false) }
     var selectedStepIds by remember { mutableStateOf(emptySet<Int>()) }
 
-    val indentationLevel = proof.steps.count { it is Proof.ProofStep.Assumption } -
+    val isSubProofActive = proof.steps.count { it is Proof.ProofStep.Assumption } >
                            proof.steps.count { it is Proof.ProofStep.ImplicationIntroductionStep }
-    val isSubProofActive = indentationLevel > 0
 
     val stepIndentationLevels = remember(proof.steps) {
         val levels = mutableListOf<Int>()
@@ -62,13 +61,15 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        coroutineScope.launch {
-                            repository.saveProof(proof)
-                            scaffoldState.snackbarHostState.showSnackbar("Proof Saved!")
+                    if (setName != null) {
+                        IconButton(onClick = {
+                            coroutineScope.launch {
+                                repository.saveProof(setName, proof)
+                                scaffoldState.snackbarHostState.showSnackbar("Proof Saved!")
+                            }
+                        }) {
+                            Icon(Icons.Default.Save, contentDescription = "Save Proof")
                         }
-                    }) {
-                        Icon(Icons.Default.Save, contentDescription = "Save Proof")
                     }
                 }
             )
@@ -80,6 +81,7 @@ fun GameScreen(initialProof: Proof, onBack: () -> Unit) {
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
+            // Proof Display
             Text("Premises:", style = MaterialTheme.typography.h6)
             proof.problem.premises.forEachIndexed { index, premise ->
                 val id = index + 1

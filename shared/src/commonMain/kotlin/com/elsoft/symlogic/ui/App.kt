@@ -2,7 +2,9 @@ package com.elsoft.symlogic.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
@@ -12,15 +14,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.elsoft.symlogic.problems.ProblemDefinition
 import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProblemDefinition
 
 @Composable
 fun App() {
     MaterialTheme {
         val navigationStateHolder = remember { NavigationStateHolder(Screen.MainMenu) }
 
-        // Handle back press for Android
         BackHandler(enabled = navigationStateHolder.backStack.size > 1) {
             navigationStateHolder.goBack()
         }
@@ -29,17 +30,23 @@ fun App() {
             Screen.MainMenu -> MainMenuScreen(onNavigate = navigationStateHolder::navigateTo)
             Screen.GeneratedProblems -> GeneratedProblemsScreen(
                 onBack = navigationStateHolder::goBack,
-                onSolve = { problem -> navigationStateHolder.navigateTo(Screen.Solver(problem)) }
+                onSolve = { problem ->
+                    // Pass "Generated" as the setName for generated problems
+                    navigationStateHolder.navigateTo(Screen.Solver(Proof(problem), "Generated"))
+                }
             )
             Screen.PreWrittenProblems -> PreWrittenProblemsScreen(
                 onBack = navigationStateHolder::goBack,
-                onSolve = { problem -> navigationStateHolder.navigateTo(Screen.Solver(problem)) }
+                onSolve = { proof, setName ->
+                    navigationStateHolder.navigateTo(Screen.Solver(proof, setName))
+                }
             )
             Screen.ImportProblemSet -> ImportProblemSetScreen(
                 onBack = navigationStateHolder::goBack
             )
             is Screen.Solver -> GameScreen(
-                initialProof = Proof(currentScreen.problem),
+                initialProof = currentScreen.proof,
+                setName = currentScreen.setName,
                 onBack = navigationStateHolder::goBack
             )
         }
@@ -58,25 +65,15 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
             style = MaterialTheme.typography.h4,
             modifier = Modifier.padding(bottom = 32.dp)
         )
-
-        Button(
-            onClick = { onNavigate(Screen.GeneratedProblems) },
-            modifier = Modifier.padding(8.dp)
-        ) {
+        Button(onClick = { onNavigate(Screen.GeneratedProblems) }) {
             Text("Practice with Generated Problems")
         }
-
-        Button(
-            onClick = { onNavigate(Screen.PreWrittenProblems) },
-            modifier = Modifier.padding(8.dp)
-        ) {
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = { onNavigate(Screen.PreWrittenProblems) }) {
             Text("Solve Pre-written Problems")
         }
-
-        Button(
-            onClick = { onNavigate(Screen.ImportProblemSet) },
-            modifier = Modifier.padding(8.dp)
-        ) {
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = { onNavigate(Screen.ImportProblemSet) }) {
             Text("Import Problem Set")
         }
     }

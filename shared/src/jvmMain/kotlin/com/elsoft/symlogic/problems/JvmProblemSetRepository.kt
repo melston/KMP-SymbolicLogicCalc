@@ -2,13 +2,12 @@ package com.elsoft.symlogic.problems
 
 import com.elsoft.symlogic.logic.Expression
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.io.File
 
 // Actual implementation for JVM
 class JvmProblemSetRepository : ProblemSetRepository {
 
-    private val json = Json { prettyPrint = true }
+    private val json = AppJson // Use the globally configured Json instance
     private val baseDir: File
     private val setsDir: File
     private val proofsDir: File
@@ -16,7 +15,7 @@ class JvmProblemSetRepository : ProblemSetRepository {
     init {
         val userHome = System.getProperty("user.home")
         baseDir = File(userHome, ".symlogic")
-        setsDir = File(baseDir, "problems")
+        setsDir = File(baseDir, "problem_sets")
         proofsDir = File(baseDir, "proofs")
         if (!setsDir.exists()) setsDir.mkdirs()
         if (!proofsDir.exists()) proofsDir.mkdirs()
@@ -32,16 +31,10 @@ class JvmProblemSetRepository : ProblemSetRepository {
         return File(proofsDir, dirName)
     }
 
-    private fun getFileForProof(proof: Proof): File {
-        val dir = getDirForProof(proof.problem.id.substringBefore(" ")) // Assuming ID format "SetName 1.2"
+    private fun getFileForProof(setName: String, problemId: String): File {
+        val dir = getDirForProof(setName)
         if (!dir.exists()) dir.mkdirs()
-        val filename = proof.problem.id.replace(Regex("[^a-zA-Z0-9_]"), "_") + ".json"
-        return File(dir, filename)
-    }
-    
-    private fun getFileForProof(problem: ProblemDefinition): File {
-        val dir = getDirForProof(problem.id.substringBefore(" "))
-        val filename = problem.id.replace(Regex("[^a-zA-Z0-9_]"), "_") + ".json"
+        val filename = problemId.replace(Regex("[^a-zA-Z0-9_]"), "_") + ".json"
         return File(dir, filename)
     }
 
@@ -84,14 +77,14 @@ class JvmProblemSetRepository : ProblemSetRepository {
         }
     }
 
-    override suspend fun saveProof(proof: Proof) {
-        val file = getFileForProof(proof)
+    override suspend fun saveProof(setName: String, proof: Proof) {
+        val file = getFileForProof(setName, proof.problem.id)
         val jsonString = json.encodeToString(proof)
         file.writeText(jsonString)
     }
 
-    override suspend fun loadProof(problem: ProblemDefinition): Proof? {
-        val file = getFileForProof(problem)
+    override suspend fun loadProof(setName: String, problem: ProblemDefinition): Proof? {
+        val file = getFileForProof(setName, problem.id)
         if (!file.exists()) return null
         return try {
             val jsonString = file.readText()
@@ -105,8 +98,15 @@ class JvmProblemSetRepository : ProblemSetRepository {
     override suspend fun listSolvedProblemIds(setName: String): Set<String> {
         val dir = getDirForProof(setName)
         if (!dir.exists()) return emptySet()
+        // To get the original ID, we need to load the proof file
         return dir.listFiles { _, name -> name.endsWith(".json") }
-            ?.map { it.nameWithoutExtension.replace("_", " ") }
+            ?.mapNotNull {
+                try {
+                    json.decodeFromString<Proof>(it.readText()).problem.id
+                } catch (e: Exception) {
+                    null
+                }
+            }
             ?.toSet() ?: emptySet()
     }
 }
