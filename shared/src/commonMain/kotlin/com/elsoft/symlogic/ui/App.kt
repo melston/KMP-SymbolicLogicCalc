@@ -31,7 +31,6 @@ fun App() {
             Screen.GeneratedProblems -> GeneratedProblemsScreen(
                 onBack = navigationStateHolder::goBack,
                 onSolve = { problem ->
-                    // Pass "Generated" as the setName for generated problems
                     navigationStateHolder.navigateTo(Screen.Solver(Proof(problem), "Generated"))
                 }
             )
@@ -41,7 +40,7 @@ fun App() {
                     navigationStateHolder.navigateTo(Screen.Solver(proof, setName))
                 }
             )
-            Screen.ImportProblemSet -> ImportProblemSetScreen(
+            Screen.ProblemSetManagement -> ProblemSetManagementScreen( // Updated route
                 onBack = navigationStateHolder::goBack
             )
             is Screen.Solver -> GameScreen(
@@ -73,8 +72,8 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
             Text("Solve Pre-written Problems")
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { onNavigate(Screen.ImportProblemSet) }) {
-            Text("Import Problem Set")
+        Button(onClick = { onNavigate(Screen.ProblemSetManagement) }) { // Updated route
+            Text("Manage Problem Sets") // Updated text
         }
     }
 }
