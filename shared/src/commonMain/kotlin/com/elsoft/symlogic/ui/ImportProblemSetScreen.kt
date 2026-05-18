@@ -3,7 +3,7 @@ package com.elsoft.symlogic.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,9 +23,8 @@ fun ImportProblemSetScreen(onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var messageColor by remember { mutableStateOf(Color.Green) }
 
-    // Read theme colors once in the Composable body
     val errorColor = MaterialTheme.colors.error
-    val successColor = Color.Green // Or a color from your theme
+    val successColor = Color.Green
 
     Scaffold(
         topBar = {
@@ -33,7 +32,8 @@ fun ImportProblemSetScreen(onBack: () -> Unit) {
                 title = { Text("Import Problem Set") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -51,14 +51,22 @@ fun ImportProblemSetScreen(onBack: () -> Unit) {
             OutlinedTextField(
                 value = textContent,
                 onValueChange = { textContent = it },
-                label = { Text("Paste Problem Set Text Here") },
+                label = { Text("Paste Plain Text Here or Load From File") },
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )
             Spacer(Modifier.height(16.dp))
 
-            // Platform-specific button to load from a file
             FilePickerButton { fileContent ->
-                textContent = fileContent
+                message = null // Clear previous messages
+                val trimmedContent = fileContent.trim()
+                if (trimmedContent.startsWith("{") && trimmedContent.endsWith("}")) {
+                    message = "Incorrect Format: Cannot import JSON files directly. " +
+                            "Please provide content in Problem Set format."
+                    messageColor = errorColor
+                    textContent = "" // Clear the text area
+                } else {
+                    textContent = fileContent
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -70,13 +78,12 @@ fun ImportProblemSetScreen(onBack: () -> Unit) {
                             try {
                                 val problemSet = parser.parse(setName, textContent)
                                 repository.saveProblemSet(problemSet)
-                                message = "Successfully imported '${problemSet.name}' with ${problemSet.problems.size} problems."
+                                message = "Successfully parsed and imported '${problemSet.name}' with ${problemSet.problems.size} problems."
                                 messageColor = successColor
-                                // Clear fields on success
                                 setName = ""
                                 textContent = ""
                             } catch (e: Exception) {
-                                message = "Error: ${e.message}"
+                                message = "Error parsing plain text: ${e.message}"
                                 messageColor = errorColor
                             }
                         }
