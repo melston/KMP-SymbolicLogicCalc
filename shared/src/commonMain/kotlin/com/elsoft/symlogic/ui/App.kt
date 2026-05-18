@@ -1,11 +1,6 @@
 package com.elsoft.symlogic.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -15,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.Proof
-import com.elsoft.symlogic.problems.ProblemDefinition
 
 @Composable
 fun App() {
@@ -36,11 +30,11 @@ fun App() {
             )
             Screen.PreWrittenProblems -> PreWrittenProblemsScreen(
                 onBack = navigationStateHolder::goBack,
-                onSolve = { proof, setName ->
+                onSolve = { proof, setName, status ->
                     navigationStateHolder.navigateTo(Screen.Solver(proof, setName))
                 }
             )
-            Screen.ProblemSetManagement -> ProblemSetManagementScreen( // Updated route
+            Screen.ProblemSetManagement -> ProblemSetManagementScreen(
                 onBack = navigationStateHolder::goBack
             )
             is Screen.Solver -> GameScreen(
@@ -72,8 +66,8 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
             Text("Solve Pre-written Problems")
         }
         Spacer(Modifier.height(8.dp))
-        Button(onClick = { onNavigate(Screen.ProblemSetManagement) }) { // Updated route
-            Text("Manage Problem Sets") // Updated text
+        Button(onClick = { onNavigate(Screen.ProblemSetManagement) }) {
+            Text("Manage Problem Sets")
         }
     }
 }

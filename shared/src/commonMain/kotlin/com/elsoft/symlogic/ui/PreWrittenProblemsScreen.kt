@@ -8,6 +8,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,19 +16,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProofStatus
+import com.elsoft.symlogic.problems.ProblemDefinition
 import com.elsoft.symlogic.problems.ProblemSet
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (Proof, String) -> Unit) {
+fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (Proof, String, ProofStatus) -> Unit) {
     val problemSetRepository = remember { getProblemSetRepository() }
     val coroutineScope = rememberCoroutineScope()
 
     var availableSetNames by remember { mutableStateOf(emptyList<String>()) }
     var selectedProblemSet by remember { mutableStateOf<ProblemSet?>(null) }
-    var solvedProblemIds by remember { mutableStateOf(emptySet<String>()) }
+    var proofStatuses by remember { mutableStateOf(emptyMap<String, ProofStatus>()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -36,7 +39,7 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (Proof, String) -> Uni
 
     LaunchedEffect(selectedProblemSet) {
         selectedProblemSet?.let {
-            solvedProblemIds = problemSetRepository.listSolvedProblemIds(it.name)
+            proofStatuses = problemSetRepository.getProofStatuses(it.name)
         }
     }
 
@@ -78,26 +81,23 @@ fun PreWrittenProblemsScreen(onBack: () -> Unit, onSolve: (Proof, String) -> Uni
                     Spacer(Modifier.height(8.dp))
                     LazyColumn {
                         items(set.problems) { problem ->
-                            val isSolved = solvedProblemIds.contains(problem.id)
+                            val status = proofStatuses[problem.id] ?: ProofStatus.NotStarted
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
                                         coroutineScope.launch {
-                                            val savedProof = problemSetRepository.loadProof(set.name, problem)
-                                            onSolve(savedProof ?: Proof(problem), set.name)
+                                            val savedProof = problemSetRepository.loadProof(set.name, problem.id)
+                                            onSolve(savedProof ?: Proof(problem), set.name, status)
                                         }
                                     }
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (isSolved) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Solved",
-                                        tint = Color.Green,
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    )
+                                when (status) {
+                                    ProofStatus.Completed -> Icon(Icons.Default.Check, "Completed", tint = Color.Green, modifier = Modifier.padding(end = 8.dp))
+                                    ProofStatus.InProgress -> Icon(Icons.Default.HourglassEmpty, "In Progress", tint = Color.Blue, modifier = Modifier.padding(end = 8.dp))
+                                    ProofStatus.NotStarted -> Spacer(modifier = Modifier.width(24.dp)) // Align text
                                 }
                                 Column {
                                     Text(problem.id, fontWeight = FontWeight.Bold)

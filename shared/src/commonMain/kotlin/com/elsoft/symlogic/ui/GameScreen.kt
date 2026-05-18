@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.Proof
+import com.elsoft.symlogic.problems.ProofStatus
 import com.elsoft.symlogic.problems.ProofValidator
 import com.elsoft.symlogic.problems.ValidationResult
 import com.elsoft.symlogic.problems.getProblemSetRepository

@@ -36,19 +36,25 @@ interface ProblemSetRepository {
      * @param proof The proof object to save.
      */
     suspend fun saveProof(setName: String, proof: Proof)
+    suspend fun loadProof(setName: String, problemId: String): Proof?
+    suspend fun deleteProof(setName: String, problemId: String): Boolean
+    suspend fun deleteAllProofsInSet(setName: String)
 
     /**
-     * Loads a saved proof for a given problem within a specific problem set.
-     * @param setName The name of the problem set.
-     * @param problem The definition of the problem for which to load the proof.
+     * Moves a ProblemDefinition and its associated Proof from one ProblemSet to another.
+     * This involves updating both ProblemSet files and moving the Proof file.
+     * @param problem The ProblemDefinition to move.
+     * @param sourceSetName The name of the ProblemSet the problem is currently in.
+     * @param targetSetName The name of the ProblemSet to move the problem to.
      */
-    suspend fun loadProof(setName: String, problem: ProblemDefinition): Proof?
+    suspend fun moveProblem(problem: ProblemDefinition, sourceSetName: String, targetSetName: String)
 
     /**
-     * Lists the IDs of all problems that have a saved proof within a given problem set.
+     * Lists the status of all problems that have a saved proof within a given problem set.
      * @param setName The name of the problem set.
+     * @return A map of Problem ID to its ProofStatus.
      */
-    suspend fun listSolvedProblemIds(setName: String): Set<String>
+    suspend fun getProofStatuses(setName: String): Map<String, ProofStatus>
 }
 
 /**

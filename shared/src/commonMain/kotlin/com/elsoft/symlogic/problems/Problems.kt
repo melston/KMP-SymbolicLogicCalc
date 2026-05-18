@@ -5,6 +5,15 @@ import com.elsoft.symlogic.logic.Rule
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 
+/**
+ * Represents the completion status of a proof.
+ */
+enum class ProofStatus {
+    NotStarted,
+    InProgress,
+    Completed
+}
+
 @Serializable
 data class ProblemDefinition(
     val id: String,
@@ -28,10 +37,6 @@ data class Proof(
     }
 
     fun addImplicationIntroductionStep(assumptionIds: List<Int>, conclusionId: Int): Proof {
-        // The expression for this step will be constructed by the validator/UI logic
-        // For now, we can use a placeholder or derive it if possible.
-        // Let's assume the calling code will provide the correct expression.
-        // A more robust implementation might derive it here.
         val assumptionExpressions = assumptionIds.mapNotNull { id ->
             steps.find { it.id == id }?.expression 
         }
@@ -45,7 +50,6 @@ data class Proof(
             }
             Expression.Implies(combinedAssumptions, conclusionExpression)
         } else {
-            // Placeholder, this should be handled more gracefully
             Expression.Variable("Error: Could not construct II expression")
         }
 

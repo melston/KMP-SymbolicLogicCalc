@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +33,8 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
     var showAddSetDialog by remember { mutableStateOf(false) }
     var showProblemDialog by remember { mutableStateOf(false) }
     var problemToEdit by remember { mutableStateOf<ProblemDefinition?>(null) }
-    var itemToDelete by remember { mutableStateOf<Any?>(null) } // Can be a ProblemSet or ProblemDefinition
+    var itemToDelete by remember { mutableStateOf<Any?>(null) }
+    var problemToMove by remember { mutableStateOf<ProblemDefinition?>(null) }
 
     fun refreshProblemSets(selectSetNamed: String? = selectedSet?.name) {
         coroutineScope.launch {
@@ -96,6 +98,9 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
                                     text = problem.id,
                                     modifier = Modifier.weight(1f).clickable { problemToEdit = problem; showProblemDialog = true }.padding(8.dp)
                                 )
+                                if (set.name == "Generated") {
+                                    IconButton(onClick = { problemToMove = problem }) { Icon(Icons.Default.Send, "Move Problem") }
+                                }
                                 IconButton(onClick = { itemToDelete = problem }) { Icon(Icons.Default.Delete, "Delete Problem") }
                             }
                         }
@@ -166,6 +171,21 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
                         }
                     }
                     itemToDelete = null
+                }
+            }
+        )
+    }
+
+    problemToMove?.let { problem ->
+        MoveProblemDialog(
+            problem = problem,
+            existingSetNames = problemSets.map { it.name }.filter { it != "Generated" },
+            onDismiss = { problemToMove = null },
+            onMove = { targetSetName ->
+                coroutineScope.launch {
+                    repository.moveProblem(problem, "Generated", targetSetName)
+                    refreshProblemSets(selectSetNamed = targetSetName)
+                    problemToMove = null
                 }
             }
         )
@@ -275,6 +295,76 @@ private fun ProblemDialog(
                     errorMessage = "Parsing Error: ${e.message}"
                 }
             }) { Text("Save") }
+        },
+        dismissButton = { Button(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun MoveProblemDialog(
+    problem: ProblemDefinition,
+    existingSetNames: List<String>,
+    onDismiss: () -> Unit,
+    onMove: (String) -> Unit
+) {
+    var newSetName by remember { mutableStateOf("") }
+    var selectedExistingSet by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Move Problem '${problem.id}'") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Select an existing set or create a new one.")
+                
+                LazyColumn(modifier = Modifier.heightIn(max = 150.dp)) {
+                    items(existingSetNames) { name ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                selectedExistingSet = name
+                                newSetName = ""
+                            },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedExistingSet == name,
+                                onClick = { 
+                                    selectedExistingSet = name
+                                    newSetName = ""
+                                }
+                            )
+                            Text(name)
+                        }
+                    }
+                }
+                
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                OutlinedTextField(
+                    value = newSetName,
+                    onValueChange = {
+                        newSetName = it
+                        selectedExistingSet = ""
+                        errorMessage = null
+                    },
+                    label = { Text("New Set Name") },
+                    isError = errorMessage != null
+                )
+                errorMessage?.let {
+                    Text(it, color = MaterialTheme.colors.error, style = MaterialTheme.typography.caption)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val target = newSetName.trim().takeIf { it.isNotEmpty() } ?: selectedExistingSet
+                if (target.isBlank()) {
+                    errorMessage = "Please select or create a set."
+                } else {
+                    onMove(target)
+                }
+            }) { Text("Move") }
         },
         dismissButton = { Button(onClick = onDismiss) { Text("Cancel") } }
     )
