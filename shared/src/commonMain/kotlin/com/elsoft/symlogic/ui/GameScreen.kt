@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,11 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.elsoft.symlogic.problems.Proof
-import com.elsoft.symlogic.problems.ProofStatus
 import com.elsoft.symlogic.problems.ProofValidator
 import com.elsoft.symlogic.problems.ValidationResult
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
+import com.elsoft.symlogic.ui.util.getTextExporter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -29,6 +30,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
     val validator = remember { ProofValidator() }
     val expressionParser = remember { ExpressionParser() }
     val repository = remember { getProblemSetRepository() }
+    val textExporter = remember { getTextExporter() } // Get platform-specific exporter
     val coroutineScope = rememberCoroutineScope()
     val scaffoldState = rememberScaffoldState()
 
@@ -72,6 +74,12 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                             Icon(Icons.Default.Save, contentDescription = "Save Proof")
                         }
                     }
+                    IconButton(onClick = {
+                        val formattedProof = formatProofForExport(proof, stepIndentationLevels)
+                        textExporter.exportText("${proof.problem.id}_proof.txt", formattedProof)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Export Proof")
+                    }
                 }
             )
         },
@@ -82,7 +90,6 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
-            // Proof Display
             Text("Premises:", style = MaterialTheme.typography.h6)
             proof.problem.premises.forEachIndexed { index, premise ->
                 val id = index + 1
@@ -265,4 +272,65 @@ fun ProofStepRow(
         }
         Text(justification, fontFamily = FontFamily.Monospace, color = Color.Gray)
     }
+}
+
+private fun formatProofForExport(proof: Proof, stepIndentationLevels: List<Int>): String {
+    val builder = StringBuilder()
+
+    // --- Calculate maxLeftPartLength for alignment ---
+    var maxLeftPartLength = 0
+    val indentUnit = "    " // 4 spaces per indent level
+
+    // Premises
+    proof.problem.premises.forEachIndexed { index, premise ->
+        val idString = "${index + 1}."
+        val expressionString = premise.toString()
+        val currentLeftPartLength = idString.length + 1 + expressionString.length // ID + space + expression
+        maxLeftPartLength = maxOf(maxLeftPartLength, currentLeftPartLength)
+    }
+
+    // Proof Steps
+    proof.steps.forEachIndexed { index, step ->
+        val indent = indentUnit.repeat(stepIndentationLevels[index])
+        val idString = "${step.id}."
+        val expressionString = step.expression.toString()
+        val currentLeftPartLength = indent.length + idString.length + 1 + expressionString.length // Indent + ID + space + expression
+        maxLeftPartLength = maxOf(maxLeftPartLength, currentLeftPartLength)
+    }
+
+    // Add a buffer for spacing between the left part and justification
+    val buffer = 4
+    val targetLeftPartLength = maxLeftPartLength + buffer
+
+    builder.append("Problem: ${proof.problem.id}\n")
+    builder.append("Premises:\n")
+    proof.problem.premises.forEachIndexed { index, premise ->
+        val idString = "${index + 1}."
+        val expressionString = premise.toString()
+        val leftPart = "$idString $expressionString"
+        val paddedLeftPart = leftPart.padEnd(targetLeftPartLength)
+        builder.append("  $paddedLeftPart (Premise)\n")
+    }
+
+    val proofLine = "Prove: ${proof.problem.conclusion}"
+    builder.append("${proofLine}\n")
+    // builder.append("-".repeat(proofLine.length) + "\n")
+
+    proof.steps.forEachIndexed { index, step ->
+        val indent = indentUnit.repeat(stepIndentationLevels[index])
+        val idString = "${step.id}."
+        val expressionString = step.expression.toString()
+        
+        val justification = when (step) {
+            is Proof.ProofStep.RegularStep -> " ${step.parentStepIds.joinToString()} - ${step.rule.name}"
+            is Proof.ProofStep.Assumption -> "Assumption"
+            is Proof.ProofStep.ImplicationIntroductionStep -> "${step.assumptionIds.joinToString()}-${step.conclusionOfSubProofId} - II"
+        }
+        
+        val leftPart = "$indent$idString $expressionString"
+        val paddedLeftPart = leftPart.padEnd(targetLeftPartLength)
+
+        builder.append("  $paddedLeftPart ($justification)\n")
+    }
+    return builder.toString()
 }
