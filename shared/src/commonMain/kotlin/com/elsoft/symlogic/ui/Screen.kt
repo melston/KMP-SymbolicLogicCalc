@@ -9,6 +9,7 @@ sealed class Screen {
     data object MainMenu : Screen()
     data object GeneratedProblems : Screen()
     data object PreWrittenProblems : Screen()
-    data object ProblemSetManagement : Screen() // Renamed from ImportProblemSet
+    data object ProblemSetManagement : Screen()
+    data object Help : Screen() // New Help Screen
     data class Solver(val proof: Proof, val setName: String?) : Screen()
 }

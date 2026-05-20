@@ -27,8 +27,15 @@ kotlin {
                 implementation(libs.compose.resources)
                 implementation(libs.compose.icons)
                 
-                // Core settings dependency is all that's needed
                 implementation(libs.multiplatformSettings)
+                
+                // Add Markdown Renderer from Maven Central
+                implementation(libs.multiplatform.markdown.renderer)
+                // For Material 2 themed apps
+                implementation(libs.multiplatform.markdown.renderer.m2)
+                // OR for Material 3 themed apps
+                //implementation("com.mikepenz:multiplatform-markdown-renderer-m3:${version}")
+                implementation(libs.multiplatform.markdown.renderer.code)
             }
         }
         val commonTest by getting {
@@ -48,7 +55,6 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation(compose.desktop.currentOs)
-                // The -compose-helper dependency does not exist and should be removed
             }
         }
         val jvmTest by getting {

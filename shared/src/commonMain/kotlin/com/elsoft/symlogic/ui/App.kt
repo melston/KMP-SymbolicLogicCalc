@@ -37,6 +37,9 @@ fun App() {
             Screen.ProblemSetManagement -> ProblemSetManagementScreen(
                 onBack = navigationStateHolder::goBack
             )
+            Screen.Help -> HelpScreen(
+                onBack = navigationStateHolder::goBack
+            )
             is Screen.Solver -> GameScreen(
                 initialProof = currentScreen.proof,
                 setName = currentScreen.setName,
@@ -68,6 +71,10 @@ fun MainMenuScreen(onNavigate: (Screen) -> Unit) {
         Spacer(Modifier.height(8.dp))
         Button(onClick = { onNavigate(Screen.ProblemSetManagement) }) {
             Text("Manage Problem Sets")
+        }
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = { onNavigate(Screen.Help) }) {
+            Text("Help")
         }
     }
 }
