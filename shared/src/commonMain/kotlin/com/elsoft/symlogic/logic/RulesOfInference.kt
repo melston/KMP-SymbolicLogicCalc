@@ -154,7 +154,7 @@ object DisjunctiveSyllogism : Rule {
                 if (expressions.contains(notP)) {
                     results.add(Derivation(e1.right, this, listOf(e1, notP)))
                 }
-                
+
                 // P | Q, ~Q yields P
                 val notQ = Expression.Not(e1.right)
                 if (expressions.contains(notQ)) {
@@ -239,7 +239,7 @@ object Conjunction : Rule {
             for (j in i + 1 until expressions.size) {
                 val e1 = expressions[i]
                 val e2 = expressions[j]
-                
+
                 results.add(Derivation(Expression.And(e1, e2), this, listOf(e1, e2)))
                 results.add(Derivation(Expression.And(e2, e1), this, listOf(e1, e2)))
             }
@@ -267,32 +267,32 @@ object Conjunction : Rule {
 @SerialName("Addition")
 object Addition : Rule {
     override val name = "Addition"
-    
+
     // Addition is notoriously difficult in forward generation. It creates an infinite space of "P | X".
     // If X is an unguessable complex string, the problem looks artificial and unsolvable for a human.
-    // To prevent this, we heavily restrict Addition. We ONLY allow addition of single variables (e.g. `p`, `~q`) 
+    // To prevent this, we heavily restrict Addition. We ONLY allow addition of single variables (e.g. `p`, `~q`)
     // that are already present in the basic context of the problem, rather than combining entire complex statements together randomly.
     override fun apply(expressions: List<Expression>): List<Derivation> {
         val results = mutableListOf<Derivation>()
-        
+
         // Extract a pool of simple variables/not variables from current expressions
         val simpleTerms = mutableSetOf<Expression>()
         for (e in expressions) {
             extractSimpleTerms(e, simpleTerms)
         }
-        
+
         for (e1 in expressions) {
             for (term in simpleTerms) {
                 if (e1 != term) {
                     // Only list e1 as the parent since the rule of addition logically only depends on e1.
-                    results.add(Derivation(Expression.Or(e1, term), this, listOf(e1))) 
+                    results.add(Derivation(Expression.Or(e1, term), this, listOf(e1)))
                     results.add(Derivation(Expression.Or(term, e1), this, listOf(e1)))
                 }
             }
         }
         return results
     }
-    
+
     private fun extractSimpleTerms(e: Expression, terms: MutableSet<Expression>) {
         when (e) {
             is Expression.Variable -> terms.add(e)
@@ -393,7 +393,7 @@ object DestructiveDilemma : Rule {
             if (e1 is Expression.Or) { // ~R | ~S
                 val leftNot = e1.left as? Expression.Not
                 val rightNot = e1.right as? Expression.Not
-                
+
                 if (leftNot != null && rightNot != null) {
                     for (e2 in expressions) {
                         if (e2 is Expression.Implies && e2.right == leftNot.operand) { // P -> R
@@ -403,7 +403,7 @@ object DestructiveDilemma : Rule {
                                         Expression.Or( // ~P | ~Q
                                             Expression.Not(e2.left),
                                             Expression.Not(e3.left)),
-                                        this, 
+                                        this,
                                         listOf(e1, e2, e3)
                                     ))
                                 }
@@ -440,7 +440,30 @@ object DestructiveDilemma : Rule {
     }
 }
 
+/**
+ * Allow the addition of an already proved WFF into the context of a subproof.
+ */
+@Serializable
+@SerialName("Reiteration")
+object Reiteration : Rule {
+    override val name = "Reiteration"
+
+    override fun apply(expressions: List<Expression>): List<Derivation> {
+        // Reiteration allows any existing expression to be "re-stated".
+        // In the context of the generator, this isn't very useful, but for solving, it's crucial.
+        // We'll allow it to apply to any single expression.
+        return expressions.map { Derivation(it, this, listOf(it)) }
+    }
+
+    override fun validate(derivedExpression: Expression, parentExpressions: List<Expression>): Boolean {
+        if (parentExpressions.size != 1) return false
+        // The derived expression must be identical to the single parent.
+        return derivedExpression == parentExpressions.first()
+    }
+}
+
 val AllRulesOfInference = listOf(
     ModusPonens, ModusTollens, HypotheticalSyllogism, DisjunctiveSyllogism,
-    Simplification, Conjunction, Addition, ConstructiveDilemma, DestructiveDilemma
+    Simplification, Conjunction, Addition, ConstructiveDilemma, DestructiveDilemma,
+    Reiteration
 )
