@@ -6,8 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.*
@@ -21,6 +22,7 @@ import com.elsoft.symlogic.problems.ProofValidator
 import com.elsoft.symlogic.problems.ValidationResult
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
+import com.elsoft.symlogic.ui.components.Tooltip
 import com.elsoft.symlogic.ui.util.getTextExporter
 import kotlinx.coroutines.launch
 
@@ -30,13 +32,14 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
     val validator = remember { ProofValidator() }
     val expressionParser = remember { ExpressionParser() }
     val repository = remember { getProblemSetRepository() }
-    val textExporter = remember { getTextExporter() } // Get platform-specific exporter
+    val textExporter = remember { getTextExporter() }
     val coroutineScope = rememberCoroutineScope()
     val scaffoldState = rememberScaffoldState()
 
     var validationError by remember { mutableStateOf<String?>(null) }
     var showInputDialog by remember { mutableStateOf(false) }
     var showProofCompleteDialog by remember { mutableStateOf(false) }
+    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var selectedStepIds by remember { mutableStateOf(emptySet<Int>()) }
 
     val isSubProofActive = proof.steps.count { it is Proof.ProofStep.Assumption } >
@@ -60,25 +63,37 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                 title = { Text(proof.problem.id) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (setName != null) {
-                        IconButton(onClick = {
-                            coroutineScope.launch {
-                                repository.saveProof(setName, proof)
-                                scaffoldState.snackbarHostState.showSnackbar("Proof Saved!")
-                            }
-                        }) {
-                            Icon(Icons.Default.Save, contentDescription = "Save Proof")
+                    Tooltip("Delete From Selected Line") {
+                        IconButton(
+                            onClick = { showConfirmDeleteDialog = true },
+                            enabled = selectedStepIds.size == 1 && proof.steps.any { it.id == selectedStepIds.first() }
+                        ) {
+                            Icon(Icons.Default.DeleteSweep, contentDescription = "Delete From Here")
                         }
                     }
-                    IconButton(onClick = {
-                        val formattedProof = formatProofForExport(proof, stepIndentationLevels)
-                        textExporter.exportText("${proof.problem.id}_proof.txt", formattedProof)
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export Proof")
+                    if (setName != null) {
+                        Tooltip("Save Proof") {
+                            IconButton(onClick = {
+                                coroutineScope.launch {
+                                    repository.saveProof(setName, proof)
+                                    scaffoldState.snackbarHostState.showSnackbar("Proof Saved!")
+                                }
+                            }) {
+                                Icon(Icons.Default.Save, contentDescription = "Save Proof")
+                            }
+                        }
+                    }
+                    Tooltip("Export or Share Proof") {
+                        IconButton(onClick = {
+                            val formattedProof = formatProofForExport(proof, stepIndentationLevels)
+                            textExporter.exportText("${proof.problem.id}_proof.txt", formattedProof)
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Export Proof")
+                        }
                     }
                 }
             )
@@ -138,7 +153,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Add New Step", style = MaterialTheme.typography.h6)
                         Spacer(Modifier.height(16.dp))
-                        
+
                         ProofInput(
                             proof = proof,
                             initialSelectedIds = selectedStepIds,
@@ -149,7 +164,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                                     val expression = expressionParser.parse(expressionStr)
                                     val parentIds = parentIdsStr.split(",").mapNotNull { it.trim().toIntOrNull() }
                                     val newProof = proof.addStep(expression, rule, parentIds)
-                                    
+
                                     when (val result = validator.validate(newProof)) {
                                         is ValidationResult.Complete -> {
                                             proof = newProof
@@ -173,7 +188,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                                 try {
                                     val expression = expressionParser.parse(expressionStr)
                                     val newProof = proof.addAssumption(expression)
-                                    
+
                                     when (val result = validator.validate(newProof)) {
                                         is ValidationResult.ValidSoFar -> {
                                             proof = newProof
@@ -181,7 +196,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                                             selectedStepIds = emptySet()
                                         }
                                         is ValidationResult.Invalid -> validationError = "Error in step ${result.stepId}: ${result.reason}"
-                                        is ValidationResult.Complete -> {} 
+                                        is ValidationResult.Complete -> {}
                                     }
                                 } catch (e: Exception) {
                                     validationError = e.message
@@ -195,13 +210,13 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                                             proof.steps.filterIsInstance<Proof.ProofStep.ImplicationIntroductionStep>()
                                                 .any { it.assumptionIds.contains(assumption.id) }
                                         }
-                                    
+
                                     if (activeAssumptions.isNotEmpty() && proof.steps.isNotEmpty()) {
                                         val newProof = proof.addImplicationIntroductionStep(
                                             assumptionIds = activeAssumptions.map { it.id },
                                             conclusionId = proof.steps.last().id
                                         )
-                                        
+
                                         when (val result = validator.validate(newProof)) {
                                             is ValidationResult.Complete -> {
                                                 proof = newProof
@@ -224,7 +239,7 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                                 }
                             }
                         )
-                        
+
                         validationError?.let {
                             Text(it, color = MaterialTheme.colors.error, modifier = Modifier.padding(top = 8.dp))
                         }
@@ -242,6 +257,30 @@ fun GameScreen(initialProof: Proof, setName: String?, onBack: () -> Unit) {
                     Button(onClick = { showProofCompleteDialog = false }) {
                         Text("OK")
                     }
+                }
+            )
+        }
+
+        if (showConfirmDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showConfirmDeleteDialog = false },
+                title = { Text("Confirm Deletion") },
+                text = { Text("Are you sure you want to delete step ${selectedStepIds.first()} and all subsequent steps?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val stepIdToDeleteFrom = selectedStepIds.first()
+                            val stepIndex = proof.steps.indexOfFirst { it.id == stepIdToDeleteFrom }
+                            if (stepIndex != -1) {
+                                proof = proof.copy(steps = proof.steps.take(stepIndex))
+                            }
+                            selectedStepIds = emptySet()
+                            showConfirmDeleteDialog = false
+                        }
+                    ) { Text("Delete") }
+                },
+                dismissButton = {
+                    Button(onClick = { showConfirmDeleteDialog = false }) { Text("Cancel") }
                 }
             )
         }
@@ -320,13 +359,13 @@ private fun formatProofForExport(proof: Proof, stepIndentationLevels: List<Int>)
         val indent = indentUnit.repeat(stepIndentationLevels[index])
         val idString = "${step.id}."
         val expressionString = step.expression.toString()
-        
+
         val justification = when (step) {
             is Proof.ProofStep.RegularStep -> " ${step.parentStepIds.joinToString()} - ${step.rule.name}"
             is Proof.ProofStep.Assumption -> "Assumption"
             is Proof.ProofStep.ImplicationIntroductionStep -> "${step.assumptionIds.joinToString()}-${step.conclusionOfSubProofId} - II"
         }
-        
+
         val leftPart = "$indent$idString $expressionString"
         val paddedLeftPart = leftPart.padEnd(targetLeftPartLength)
 
