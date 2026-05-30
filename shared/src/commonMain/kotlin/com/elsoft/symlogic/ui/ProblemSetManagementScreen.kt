@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,8 @@ import com.elsoft.symlogic.problems.ProblemDefinition
 import com.elsoft.symlogic.problems.ProblemSet
 import com.elsoft.symlogic.problems.getProblemSetRepository
 import com.elsoft.symlogic.problems.parsers.ExpressionParser
+import com.elsoft.symlogic.problems.parsers.ProblemSetParser
+import com.elsoft.symlogic.ui.components.FilePickerButton
 import kotlinx.coroutines.launch
 
 @Composable
@@ -32,6 +35,7 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
     
     var showAddSetDialog by remember { mutableStateOf(false) }
     var showProblemDialog by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
     var problemToEdit by remember { mutableStateOf<ProblemDefinition?>(null) }
     var itemToDelete by remember { mutableStateOf<Any?>(null) }
     var problemToMove by remember { mutableStateOf<ProblemDefinition?>(null) }
@@ -68,6 +72,7 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
                     Text("Problem Sets", style = MaterialTheme.typography.h6)
                     Row {
                         IconButton(onClick = { showAddSetDialog = true }) { Icon(Icons.Default.Add, "Add New Set") }
+                        IconButton(onClick = { showImportDialog = true }) { Icon(Icons.Default.UploadFile, "Import from File") }
                         IconButton(onClick = { itemToDelete = selectedSet }, enabled = selectedSet != null) { Icon(Icons.Default.Delete, "Delete Set") }
                     }
                 }
@@ -171,6 +176,21 @@ fun ProblemSetManagementScreen(onBack: () -> Unit) {
                         }
                     }
                     itemToDelete = null
+                }
+            }
+        )
+    }
+
+    if (showImportDialog) {
+        ImportDialog(
+            existingSetNames = problemSets.map { it.name },
+            onDismiss = { showImportDialog = false },
+            onImport = { name, content ->
+                coroutineScope.launch {
+                    val problemSet = ProblemSetParser().parse(name, content)
+                    repository.saveProblemSet(problemSet)
+                    refreshProblemSets(selectSetNamed = name)
+                    showImportDialog = false
                 }
             }
         )
@@ -365,6 +385,73 @@ private fun MoveProblemDialog(
                     onMove(target)
                 }
             }) { Text("Move") }
+        },
+        dismissButton = { Button(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun ImportDialog(
+    existingSetNames: List<String>,
+    onDismiss: () -> Unit,
+    onImport: (String, String) -> Unit
+) {
+    var setName by remember { mutableStateOf("") }
+    var textContent by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import Problem Set from File") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = setName,
+                    onValueChange = {
+                        setName = it
+                        errorMessage = null
+                    },
+                    label = { Text("New Problem Set Name") },
+                    isError = errorMessage != null
+                )
+                
+                FilePickerButton { fileContent ->
+                    errorMessage = null
+                    val trimmedContent = fileContent.trim()
+                    if (trimmedContent.startsWith("{") && trimmedContent.endsWith("}")) {
+                        errorMessage = "Incorrect Format: Cannot import JSON files directly."
+                        textContent = ""
+                    } else {
+                        textContent = fileContent
+                    }
+                }
+
+                OutlinedTextField(
+                    value = textContent,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("File Content Preview") },
+                    modifier = Modifier.height(150.dp).fillMaxWidth()
+                )
+
+                errorMessage?.let {
+                    Text(it, color = MaterialTheme.colors.error, style = MaterialTheme.typography.caption)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val trimmedName = setName.trim()
+                if (trimmedName.isBlank()) {
+                    errorMessage = "Set name cannot be empty."
+                } else if (existingSetNames.any { it.equals(trimmedName, ignoreCase = true) }) {
+                    errorMessage = "A set with this name already exists."
+                } else if (textContent.isBlank()) {
+                    errorMessage = "Please load a file."
+                } else {
+                    onImport(trimmedName, textContent)
+                }
+            }) { Text("Import and Save") }
         },
         dismissButton = { Button(onClick = onDismiss) { Text("Cancel") } }
     )

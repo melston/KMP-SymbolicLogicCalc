@@ -19,7 +19,7 @@ fun HelpScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         markdownContent = try {
-            val rawContent = loadHelpResource("help/rules.md")
+            val rawContent = loadHelpResource("help/help.md")
             // Normalize line endings to handle CRLF from Windows files
             rawContent.replace("\r\n", "\n").replace('\r', '\n')
         } catch (e: Exception) {
@@ -31,7 +31,7 @@ fun HelpScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Help - Rules") },
+                title = { Text("Help") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
