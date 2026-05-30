@@ -16,7 +16,9 @@ sections of the app:
 
 ### Generating Problems
 
-On this screen, you can create a random logic problem. You can select specific rules you want the problem to focus on and choose a target number of steps for the solution. Click "Generate Problem" to create a new challenge and start solving.
+On this screen, you can create a random logic problem. You can select specific rules you 
+want the problem to focus on and choose a target number of steps for the solution. 
+Click "Generate Problem" to create a new challenge and start solving.
 
 ### Creating New Problems
 
@@ -43,7 +45,7 @@ This will parse the file and save the resulting problem set with the name you pr
 #### Pre-Written Problem Format
 
 The plain text importer expects a specific format. Each problem starts with
-an identifier on a line by itself.  The identifier is simply a name of the 
+an identifier on a line by itself.  The identifier is simply a name of the problem.
 This is, followed by premises on lines starting with
 `Premises:`, also on a line by itself, followed by all the premises for the problem, each
 on their own line.  While it is not required, indenting the premises by a space or two makes
@@ -113,7 +115,7 @@ into a new WFF that can be logically derived from the selected WFF(s).
 
 ### Modus Ponens (MP)
 Also known as "affirming the antecedent," this rule states that if you have an 
-implication and you also have its antecedent (the "if" part), you can conclude the 
+implication, and you also have its antecedent (the "if" part), you can conclude the 
 consequent (the "then" part).
 ##### Form:
 ```text
@@ -124,7 +126,7 @@ consequent (the "then" part).
 
 ### Modus Tollens (MT)
 Also known as "denying the consequent," this rule states that if you have an 
-implication and you also have the negation of its consequent (the "then" part), 
+implication, and you also have the negation of its consequent (the "then" part), 
 you can conclude the negation of the antecedent (the "if" part).
 ##### Form:
 ```text
