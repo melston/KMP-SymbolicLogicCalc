@@ -52,4 +52,31 @@ sealed class Expression {
             is Iff -> 1 + maxOf(left.getDepth(), right.getDepth())
         }
     }
+
+    // Helper to remove double negations recursively
+    fun stripDoubleNegations(): Expression {
+        return when (this) {
+            is Not -> {
+                if (operand is Not) {
+                    operand.operand.stripDoubleNegations()
+                } else {
+                    Not(operand.stripDoubleNegations())
+                }
+            }
+            is And -> And(left.stripDoubleNegations(), right.stripDoubleNegations())
+            is Or -> Or(left.stripDoubleNegations(), right.stripDoubleNegations())
+            is Implies -> Implies(left.stripDoubleNegations(), right.stripDoubleNegations())
+            is Iff -> Iff(left.stripDoubleNegations(), right.stripDoubleNegations())
+            is Variable -> this
+        }
+    }
+
+    // Helper to negate an expression without introducing double negations
+    fun negate(): Expression {
+        return if (this is Not) {
+            operand
+        } else {
+            Not(this)
+        }
+    }
 }

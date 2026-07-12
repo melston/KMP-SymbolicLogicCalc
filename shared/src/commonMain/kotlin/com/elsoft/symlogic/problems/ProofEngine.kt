@@ -29,91 +29,62 @@ class ProofEngine(private val random: Random = Random.Default) {
      * @return A [ProblemDefinition] containing premises and a conclusion.
      */
     fun generateProblem(targetSteps: Int, requiredRules: List<Rule> = emptyList()): ProblemDefinition {
-        val rules = AllRulesOfInference + AllRulesOfReplacement
+        val rules = AllRulesOfInference + AllRulesOfReplacement.filter { it in requiredRules }
 
         for (attempt in 0 until maxAttempts) {
-            // Start with an empty set of starting premises, we will build them uniquely
             val premiseList = generatePremises(requiredRules).toMutableList()
 
-            // A list of derivations we can make from the current premise pool.
+            // Oversample derivations to ensure we have a rich graph to search for a valid sub-proof.
+            val derivationSteps = maxOf(targetSteps + 3, targetSteps * 2)
             val derivations = generatePossibleDerivations(
-                targetSteps,
+                derivationSteps,
                 rules,
                 premiseList,
                 requiredRules
             )
 
-            val conclusion = derivations.lastOrNull()?.result ?: premiseList.last()
+            // Search through the derived expressions (from newest to oldest) to find one that
+            // forms a valid proof using all required rules and has a good step count.
+            for (derivation in derivations.reversed()) {
+                val conclusion = derivation.result
+                val queue = mutableListOf(conclusion)
+                val processed = mutableSetOf<Expression>()
+                val essentialDerivations = mutableListOf<Pair<Expression, Derivation>>()
+                val usedPremises = mutableSetOf<Expression>()
 
-            // Expressions we need to find the parents of.
-            // This will grow as we find ancestors of our conclusion that also need
-            // to be derived, or added to the initial premises, then shrink until we
-            // no longer have any expressions to find a derivation for.
-            val queue = mutableListOf(conclusion)
-            // Expressions we have seen already.
-            // This is an intermediate set that prevents looking at the same expression twice.
-            val processed = mutableSetOf<Expression>()
-            // All the steps from the initial premises to the conclusion.  This is
-            // effectively the solved proof.  It is built by working backward from the
-            // conclusion to the initial premises, looking for expressions that can be
-            // used to derive the conclusion or its ancestors.
-            val essentialDerivations = mutableListOf<Pair<Expression, Derivation>>()
-            // Backward Pruning: Find all essential expressions that form the premises
-            // of the generated problem.
-            val usedPremises = mutableSetOf<Expression>()
+                while (queue.isNotEmpty()) {
+                    val current = queue.removeFirst()
+                    if (current in processed) continue
+                    processed.add(current)
 
-            // Make sure our steps, working backward from the conclusion, can be supported
-            // by either derivations or by premises.  On leaving this loop:
-            // - `queue` will be empty (no more parents to find),
-            // - `essentialDerivations` will have all required derived steps for the problem,
-            // - `usedPremises` will contain all necessary premises for the problem.
-            while (queue.isNotEmpty()) {
-                val current = queue.removeFirst()
-
-                if (current in processed) continue
-                processed.add(current)
-
-                // Did we derive this?
-                val derivation = derivations.find { it.result == current }
-                if (derivation != null) {
-                    if (!essentialDerivations.any { it.first == derivation.result }) {
-                        queue.addAll(derivation.parents)
-                        essentialDerivations.add(Pair(derivation.result, derivation))
+                    val d = derivations.find { it.result == current }
+                    if (d != null) {
+                        if (!essentialDerivations.any { it.first == d.result }) {
+                            queue.addAll(d.parents)
+                            essentialDerivations.add(Pair(d.result, d))
+                        }
+                    } else {
+                        usedPremises.add(current)
                     }
-                } else {
-                    // It must be a starting premise
-                    usedPremises.add(current)
+                }
+
+                val usedRules = essentialDerivations.map { it.second.rule }.toSet()
+                val containsRequiredRules = requiredRules.all { it in usedRules }
+                val premisesList = usedPremises.toList()
+
+                if (containsRequiredRules &&
+                    essentialDerivations.size in maxOf(2, targetSteps / 2)..(targetSteps + 3) &&
+                    !usedPremises.contains(conclusion) &&
+                    !hasObviousConflicts(premisesList)
+                ) {
+                    val uuid = (1..8).map { random.nextInt(0, 16).toString(16) }.joinToString("")
+                    return ProblemDefinition(
+                        id = "gen_$uuid",
+                        premises = premisesList,
+                        conclusion = conclusion
+                    )
                 }
             }
-
-            // Check if we hit the user's required rules
-            val usedRules = essentialDerivations.map { it.second.rule }.toSet()
-            val containsRequiredRules = requiredRules.all { it in usedRules }
-
-            // Ensure the problem isn't completely trivial
-            // (e.g. given P prove P, or only 1 step)
-            // also ensures we generated at least `targetSteps/2` essential steps
-            // so the problem is meaty.
-            val premisesList = usedPremises.toList()
-            if (containsRequiredRules &&
-                essentialDerivations.size >= maxOf(2, targetSteps / 2) &&
-                !usedPremises.contains(conclusion) &&
-                !hasObviousConflicts(premisesList)
-            ) {
-                // To keep the generator interface simple, we just return the core
-                // ProblemDefinition.  The essentialDerivations (the solution) could
-                // theoretically be packaged as a Proof object, but since this engine's
-                // primary goal is just to generate solvable problems, returning the
-                // ProblemDefinition is sufficient for the user to then try to solve.
-                val uuid = (1..8).map { random.nextInt(0, 16).toString(16) }.joinToString("")
-                return ProblemDefinition(
-                    id = "gen_$uuid",
-                    premises = premisesList,
-                    conclusion = conclusion
-                )
-            }
-            // If the generated problem was trivial, conflicted, or missing rules,
-            // we loop and try again!
         }
 
         throw Exception("Bailed after $maxAttempts iterations.")
@@ -150,14 +121,20 @@ class ProofEngine(private val random: Random = Random.Default) {
 
             if (possibleDerivations.isEmpty()) break
 
-            // If we have required rules that haven't been met yet, heavily bias towards picking them!
             val unmetRules = requiredRules.filter { req -> derivations.none { it.rule == req } }
-
             val preferredDerivations = possibleDerivations.filter { it.rule in unmetRules }
-            val chosen = if (preferredDerivations.isNotEmpty() && random.nextDouble() < 0.8) {
-                preferredDerivations.random(random) // 80% chance to pick a missing required rule if available
+
+            val chosen = if (preferredDerivations.isNotEmpty() && random.nextDouble() < 0.95) {
+                // 95% chance to pick an unmet required rule from all possible derivations
+                preferredDerivations.random(random)
             } else {
-                possibleDerivations.random(random)
+                // Otherwise, prioritize keeping the proof connected
+                val derivedSet = derivations.map { it.result }.toSet()
+                val connectedDerivations = if (step == 0) possibleDerivations else possibleDerivations.filter { d ->
+                    d.parents.any { it in derivedSet }
+                }
+                val candidates = if (connectedDerivations.isNotEmpty()) connectedDerivations else possibleDerivations
+                candidates.random(random)
             }
 
             derivations.add(chosen)
@@ -172,11 +149,21 @@ class ProofEngine(private val random: Random = Random.Default) {
      */
     private fun generatePremises(requiredRules: List<Rule>) : MutableSet<Expression> {
         val poolSet = mutableSetOf<Expression>()
+        
+        // Generate a shared pool of base variables.
+        val basePool = premiseGenerator.generateInitialPool(5, 0)
+        var baseIdx = 0
+        fun getNextBase(count: Int): List<Expression> {
+            val list = (0 until count).map { basePool[(baseIdx + it) % basePool.size] }
+            baseIdx += count
+            return list
+        }
+
         if (requiredRules.contains(ConstructiveDilemma)) {
-            val base = premiseGenerator.generateInitialPool(4, 0)
-            val p1 = base[0];
-            val p2 = base[1];
-            val p3 = base[2];
+            val base = getNextBase(4)
+            val p1 = base[0]
+            val p2 = base[1]
+            val p3 = base[2]
             val p4 = base[3]
             poolSet.add(Expression.Or(p1, p2))
             poolSet.add(Expression.Implies(p1, p3))
@@ -184,12 +171,12 @@ class ProofEngine(private val random: Random = Random.Default) {
         }
 
         if (requiredRules.contains(DestructiveDilemma)) {
-            val base = premiseGenerator.generateInitialPool(4, 0)
-            val p1 = base[0];
-            val p2 = base[1];
-            val p3 = base[2];
+            val base = getNextBase(4)
+            val p1 = base[0]
+            val p2 = base[1]
+            val p3 = base[2]
             val p4 = base[3]
-            poolSet.add(Expression.Or(Expression.Not(p3), Expression.Not(p4)))
+            poolSet.add(Expression.Or(p3.negate(), p4.negate()))
             poolSet.add(Expression.Implies(p1, p3))
             poolSet.add(Expression.Implies(p2, p4))
         }
@@ -198,12 +185,12 @@ class ProofEngine(private val random: Random = Random.Default) {
                 HypotheticalSyllogism
             )
         ) {
-            val base = premiseGenerator.generateInitialPool(3, 1)
-            val p1 = base[0];
-            val p2 = base[1];
+            val base = getNextBase(3)
+            val p1 = base[0]
+            val p2 = base[1]
             val p3 = base[2]
             poolSet.add(Expression.Implies(p1, p2))
-            if (requiredRules.contains(ModusTollens)) poolSet.add(Expression.Not(p2))
+            if (requiredRules.contains(ModusTollens)) poolSet.add(p2.negate())
             if (requiredRules.contains(ModusPonens)) poolSet.add(p1)
             if (requiredRules.contains(HypotheticalSyllogism)) {
                 poolSet.add(Expression.Implies(p2, p3))
@@ -211,16 +198,16 @@ class ProofEngine(private val random: Random = Random.Default) {
         }
 
         if (requiredRules.contains(DisjunctiveSyllogism)) {
-            val base = premiseGenerator.generateInitialPool(2, 1)
-            val p1 = base[0];
+            val base = getNextBase(2)
+            val p1 = base[0]
             val p2 = base[1]
             poolSet.add(Expression.Or(p1, p2))
-            poolSet.add(Expression.Not(p1))
+            poolSet.add(p1.negate())
         }
 
-        // Fill any remaining slots up to our base starting pool size (e.g. at least 3)
-        while (poolSet.size < 3) {
-            poolSet.addAll(premiseGenerator.generateInitialPool(1, 1))
+        // Fill any remaining slots up to our base starting pool size (e.g. at least 4)
+        while (poolSet.size < 4) {
+            poolSet.add(premiseGenerator.generateInitialPool(1, 1).first())
         }
 
         return poolSet
